@@ -45,7 +45,7 @@ export default function LoginScreen() {
 
       <TouchableOpacity
         style={styles.btnPrimary}
-        onPress={() => router.push('./saldo')}
+        onPress={() => router.push('/saldo')}
       >
         <Text style={styles.btnPrimaryText}>Iniciar sesión →</Text>
       </TouchableOpacity>
