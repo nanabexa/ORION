@@ -1,6 +1,7 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
+import BottomNav from '@/components/BottomNav';
 
 export default function TarjetasScreen() {
   const router = useRouter();
@@ -58,30 +59,7 @@ export default function TarjetasScreen() {
         </View>
       </ScrollView>
 
-      <View style={styles.bottomNav}>
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push('/tarjetas' as any)}
-        >
-          <Text style={styles.navItemIcon}>🎫</Text>
-          <Text style={[styles.navItemText, styles.navItemActive]}>Mis tarjetas</Text>
-          <View style={styles.navDot} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push('/historial' as any)}
-        >
-          <Text style={styles.navItemIcon}>📋</Text>
-          <Text style={styles.navItemText}>Historial</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push('/perfil' as any)}
-        >
-          <Text style={styles.navItemIcon}>👤</Text>
-          <Text style={styles.navItemText}>Perfil</Text>
-        </TouchableOpacity>
-      </View>
+      <BottomNav activa="tarjetas" />
 
     </View>
   );

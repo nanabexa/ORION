@@ -1,7 +1,7 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { recargas } from '../datos';
-
+import BottomNav from '@/components/BottomNav';
 export default function HistorialScreen() {
   const router = useRouter();
 
@@ -57,29 +57,7 @@ export default function HistorialScreen() {
 
         </View>
       </ScrollView>
-
-      <View style={styles.bottomNav}>
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push('/vincular')}
-        >
-          <Text style={styles.navItemIcon}>🎫</Text>
-          <Text style={styles.navItemText}>Mis tarjetas</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem}>
-          <Text style={styles.navItemIcon}>📋</Text>
-          <Text style={[styles.navItemText, styles.navItemActive]}>Historial</Text>
-          <View style={styles.navDot} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push('/perfil' as any)}
-        >
-          <Text style={styles.navItemIcon}>👤</Text>
-          <Text style={styles.navItemText}>Perfil</Text>
-        </TouchableOpacity>
-      </View>
-
+      <BottomNav activa="historial" />
     </View>
   );
 }

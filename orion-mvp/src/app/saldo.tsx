@@ -1,6 +1,7 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { usuario, saldo as saldoData, recargas } from '../datos';
+import BottomNav from '@/components/BottomNav';
 
 export default function SaldoScreen() {
   const router = useRouter();
@@ -50,30 +51,8 @@ export default function SaldoScreen() {
           </View>
         ))}
       </ScrollView>
-
-      <View style={styles.bottomNav}>
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push('/tarjetas')}
-        >
-          <Text style={styles.navItemIcon}>🎫</Text>
-          <Text style={styles.navItemText}>Mis tarjetas</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push('/historial' as any)}
-        >
-          <Text style={styles.navItemIcon}>📋</Text>
-          <Text style={styles.navItemText}>Historial</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push('/perfil' as any)}
-        >
-          <Text style={styles.navItemIcon}>👤</Text>
-          <Text style={styles.navItemText}>Perfil</Text>
-        </TouchableOpacity>
-      </View>
+        <BottomNav activa="inicio" />
+      
     </View>
   );
 }
