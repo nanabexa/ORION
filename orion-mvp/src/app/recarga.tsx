@@ -9,7 +9,7 @@ const detectarNFC = () => {
   return 'sin-nfc';
 };
 
-type Estado = 'formulario' | 'procesando' | 'resultado';
+type Estado = 'formulario' | 'procesando' | 'resultado' | 'nfc-espera' | 'exitoso';
 type MetodoPago = 'tarjeta' | 'yappy' | 'transferencia';
 type EstadoNFC = 'nfc-activo' | 'nfc-desactivado' | 'sin-nfc';
 
@@ -34,10 +34,50 @@ export default function RecargaScreen() {
       setEstadoTracker(2);
       setTimeout(() => {
         setEstadoTracker(3);
-        setTimeout(() => setEstado('resultado'), 1000);
+        if (estadoNFC === 'nfc-activo') {
+          setEstado('nfc-espera');
+        } else {
+          setEstado('resultado');
+        }
       }, 1500);
     }, 1500);
   };
+
+  if (estado === 'nfc-espera') {
+    return (
+      <View style={styles.container}>
+        <View style={styles.navbar}>
+          <View style={{ width: 24 }} />
+          <Text style={styles.navTitle}>SINCRONIZAR</Text>
+          <View style={{ width: 24 }} />
+        </View>
+        <View style={styles.resultScreen}>
+          <View style={[styles.resultIcon, { borderColor: '#C8D400', backgroundColor: '#C8D40022' }]}>
+            <Text style={styles.resultIconText}>📶</Text>
+          </View>
+          <Text style={[styles.resultTitle, { color: '#C8D400' }]}>¡Pago aprobado!</Text>
+          <Text style={styles.resultSubtitle}>Acerca tu tarjeta a la parte trasera del teléfono</Text>
+          <View style={styles.amountBox}>
+            <Text style={styles.amountLabel}>Monto aprobado</Text>
+            <Text style={styles.amountValue}>B/. {formatearMonto()}</Text>
+          </View>
+          <View style={[styles.statusBox, { borderColor: '#C8D400', backgroundColor: '#C8D40015' }]}>
+            <Text style={styles.statusIcon}>📱</Text>
+            <View style={styles.statusText}>
+              <Text style={[styles.statusTitle, { color: '#C8D400' }]}>Mantén la tarjeta quieta</Text>
+              <Text style={styles.statusDesc}>Coloca tu tarjeta RapiPass en la parte trasera por 2 segundos.</Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            style={[styles.btnPrimary, { backgroundColor: '#C8D400' }]}
+            onPress={() => setEstado('resultado')}
+          >
+            <Text style={[styles.btnPrimaryText, { color: '#0A0E1F' }]}>Simular acercamiento →</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   if (estado === 'resultado') {
     return (
@@ -159,8 +199,8 @@ function PantallaResultado({ monto, estadoNFC, onVolver }: {
   const config = {
     'nfc-activo': {
       icon: '✦',
-      titulo: '¡Recarga lista!',
-      subtitulo: 'Tu saldo ya está activo en tu tarjeta',
+      titulo: '¡Recarga exitosa!',
+      subtitulo: 'Tu saldo está activo en tu tarjeta',
       badgeTitle: 'Saldo activo en tarjeta',
       badgeDesc: 'Puedes usar tu tarjeta de transporte inmediatamente.',
       btnColor: '#C8D400',

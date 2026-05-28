@@ -1,9 +1,11 @@
-
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const [correo, setCorreo] = useState('');
+  const [password, setPassword] = useState('');
 
   return (
     <View style={styles.container}>
@@ -26,28 +28,9 @@ export default function LoginScreen() {
         <Text style={styles.logoSub}>recarga digital</Text>
       </View>
 
-      <Text style={styles.label}>Correo</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="usuario@email.com"
-        placeholderTextColor="#3A4466"
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
-
-      <Text style={styles.label}>Contraseña</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="••••••••"
-        placeholderTextColor="#3A4466"
-        secureTextEntry
-      />
-
-      <TouchableOpacity
-        style={styles.btnPrimary}
-        onPress={() => router.push('/saldo')}
-      >
-        <Text style={styles.btnPrimaryText}>Iniciar sesión →</Text>
+      <TouchableOpacity style={styles.btnGoogle}>
+        <Text style={styles.btnGoogleIcon}>🔵</Text>
+        <Text style={styles.btnGoogleText}>Continuar con Google</Text>
       </TouchableOpacity>
 
       <View style={styles.divider}>
@@ -56,8 +39,38 @@ export default function LoginScreen() {
         <View style={styles.dividerLine} />
       </View>
 
-      <TouchableOpacity style={styles.btnSecondary}>
-        <Text style={styles.btnSecondaryText}>Crear cuenta nueva</Text>
+      <Text style={styles.label}>Correo</Text>
+      <TextInput
+        style={styles.input}
+        value={correo}
+        onChangeText={setCorreo}
+        placeholder="usuario@email.com"
+        placeholderTextColor="#8899AA"
+        keyboardType="email-address"
+        autoCapitalize="none"
+      />
+
+      <Text style={styles.label}>Contraseña</Text>
+      <TextInput
+        style={styles.input}
+        value={password}
+        onChangeText={setPassword}
+        placeholder="••••••••"
+        placeholderTextColor="#8899AA"
+        secureTextEntry
+      />
+
+      <TouchableOpacity
+        style={styles.btnPrimary}
+        onPress={() => router.push('/saldo' as any)}
+      >
+        <Text style={styles.btnPrimaryText}>Iniciar sesión →</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => router.push('/registro' as any)}>
+        <Text style={styles.loginLink}>
+          ¿No tienes cuenta? <Text style={styles.loginLinkAccent}>Regístrate</Text>
+        </Text>
       </TouchableOpacity>
 
     </View>
@@ -66,116 +79,58 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: '#0A0E1F',
-    padding: 24,
+    flex: 1, backgroundColor: '#0A0E1F', padding: 24,
   },
   hero: {
-    height: 160,
-    marginHorizontal: -24,
-    backgroundColor: '#0A0E1F',
-    overflow: 'hidden',
-    position: 'relative',
+    height: 140, marginHorizontal: -24,
+    backgroundColor: '#0A0E1F', overflow: 'hidden', position: 'relative',
   },
-  stars: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-  },
+  stars: { position: 'absolute', width: '100%', height: '100%' },
   star: {
-    position: 'absolute',
-    width: 3,
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: '#C8D400',
-    opacity: 0.6,
+    position: 'absolute', width: 3, height: 3,
+    borderRadius: 2, backgroundColor: '#C8D400', opacity: 0.6,
   },
   shootingStar: {
-    position: 'absolute',
-    top: 60,
-    left: 40,
-    width: 120,
-    height: 1.5,
-    backgroundColor: '#C8D400',
-    opacity: 0.8,
-    transform: [{ rotate: '-25deg' }],
+    position: 'absolute', top: 60, left: 40,
+    width: 120, height: 1.5, backgroundColor: '#C8D400',
+    opacity: 0.8, transform: [{ rotate: '-25deg' }],
   },
-  logoArea: {
-    alignItems: 'center',
-    marginBottom: 32,
-    marginTop: 8,
-  },
-  logo: {
-    fontSize: 36,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    letterSpacing: 4,
-  },
-  logoAccent: {
-    color: '#C8D400',
-  },
+  logoArea: { alignItems: 'center', marginBottom: 24, marginTop: 8 },
+  logo: { fontSize: 36, fontWeight: '900', color: '#FFFFFF', letterSpacing: 4 },
+  logoAccent: { color: '#C8D400' },
   logoSub: {
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.35)',
-    letterSpacing: 3,
-    marginTop: 4,
-    textTransform: 'uppercase',
+    fontSize: 10, color: 'rgba(255,255,255,0.35)',
+    letterSpacing: 3, marginTop: 4, textTransform: 'uppercase',
   },
+  btnGoogle: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 10, backgroundColor: '#141830', borderWidth: 0.5,
+    borderColor: '#1E2A50', borderRadius: 10, padding: 13,
+  },
+  btnGoogleIcon: { fontSize: 18 },
+  btnGoogleText: { fontSize: 14, color: '#FFFFFF', fontWeight: '500' },
+  divider: {
+    flexDirection: 'row', alignItems: 'center',
+    gap: 8, marginVertical: 16,
+  },
+  dividerLine: { flex: 1, height: 0.5, backgroundColor: '#1E2A50' },
+  dividerText: { fontSize: 11, color: '#8899AA' },
   label: {
-    fontSize: 10,
-    color: '#C8D400',
-    fontWeight: '600',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    marginBottom: 6,
-    marginTop: 14,
+    fontSize: 10, color: '#C8D400', fontWeight: '600',
+    letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 6, marginTop: 12,
   },
   input: {
-    backgroundColor: '#141830',
-    borderWidth: 0.5,
-    borderColor: '#1E2A50',
-    borderRadius: 10,
-    padding: 13,
-    fontSize: 13,
-    color: '#FFFFFF',
+    backgroundColor: '#141830', borderWidth: 0.5,
+    borderColor: '#1E2A50', borderRadius: 10, padding: 13,
+    fontSize: 13, color: '#FFFFFF',
   },
   btnPrimary: {
-    backgroundColor: '#0066CC',
-    borderRadius: 10,
-    padding: 14,
-    alignItems: 'center',
-    marginTop: 24,
+    backgroundColor: '#0066CC', borderRadius: 10,
+    padding: 14, alignItems: 'center', marginTop: 20, marginBottom: 14,
   },
-  btnPrimaryText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
-    letterSpacing: 0.5,
+  btnPrimaryText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  loginLink: {
+    textAlign: 'center', fontSize: 13, color: '#8899AA',
   },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginVertical: 14,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 0.5,
-    backgroundColor: '#1E2A50',
-  },
-  dividerText: {
-    fontSize: 11,
-    color: '#3A4466',
-  },
-  btnSecondary: {
-    borderWidth: 0.5,
-    borderColor: '#1E2A50',
-    borderRadius: 10,
-    padding: 13,
-    alignItems: 'center',
-  },
-  btnSecondaryText: {
-    color: '#C8D400',
-    fontSize: 13,
-  },
+  loginLinkAccent: { color: '#C8D400' },
 });
