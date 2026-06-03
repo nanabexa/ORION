@@ -1,38 +1,39 @@
-import { supabase } from './supabase'
+import { supabase } from '@/lib/supabase';
 
-export async function vincularTarjeta(userId: string, numeroTarjeta: string) {
+export const vincularTarjeta = async (usuarioId: string, numeroTarjeta: string) => {
   const { data, error } = await supabase
     .from('tarjetas')
     .insert({
-      user_id: userId,
-      numero: numeroTarjeta,
-      activa: true,
+      usuario_id: usuarioId,
+      numero_tarjeta: numeroTarjeta,
+      saldo: 0,
+      activa: true
     })
     .select()
-    .single()
+    .single();
 
-  if (error) throw error
-  return data
-}
+  if (error) throw error;
+  return data;
+};
 
-export async function getTarjetas(userId: string) {
+export const getTarjetas = async (usuarioId: string) => {
   const { data, error } = await supabase
     .from('tarjetas')
     .select('*')
-    .eq('user_id', userId)
-    .eq('activa', true)
+    .eq('usuario_id', usuarioId)
+    .eq('activa', true);
 
-  if (error) throw error
-  return data
-}
+  if (error) throw error;
+  return data;
+};
 
-export async function consultarSaldo(tarjetaId: number) {
+export const consultarSaldo = async (tarjetaId: string) => {
   const { data, error } = await supabase
     .from('tarjetas')
-    .select('saldo')
+    .select('saldo, numero_tarjeta')
     .eq('id', tarjetaId)
-    .single()
+    .single();
 
-  if (error) throw error
-  return data.saldo
-}
+  if (error) throw error;
+  return data;
+};
