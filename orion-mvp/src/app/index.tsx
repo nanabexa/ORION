@@ -1,11 +1,33 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
+import { supabase } from '../../lib/supabase';
 
 export default function LoginScreen() {
   const router = useRouter();
   const [correo, setCorreo] = useState('');
   const [password, setPassword] = useState('');
+  const [cargando, setCargando] = useState(false);
+
+  const handleLogin = async () => {
+    if (!correo || !password) {
+      Alert.alert('Error', 'Completa todos los campos');
+      return;
+    }
+
+    setCargando(true);
+    const { error } = await supabase.auth.signInWithPassword({
+      email: correo,
+      password: password,
+    });
+    setCargando(false);
+
+    if (error) {
+      Alert.alert('Error', 'Correo o contraseña incorrectos');
+    } else {
+      router.push('/saldo' as any);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -62,9 +84,12 @@ export default function LoginScreen() {
 
       <TouchableOpacity
         style={styles.btnPrimary}
-        onPress={() => router.push('/saldo' as any)}
+        onPress={handleLogin}
+        disabled={cargando}
       >
-        <Text style={styles.btnPrimaryText}>Iniciar sesión →</Text>
+        <Text style={styles.btnPrimaryText}>
+          {cargando ? 'Cargando...' : 'Iniciar sesión →'}
+        </Text>
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => router.push('/registro' as any)}>

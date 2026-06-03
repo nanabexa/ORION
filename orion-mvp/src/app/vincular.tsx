@@ -1,6 +1,8 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
+import { supabase } from '../../lib/supabase';
+import { vincularTarjeta } from '../../lib/tarjetas';
 
 type TipoTarjeta = 'rapipass' | 'metro' | null;
 
@@ -8,6 +10,7 @@ export default function VincularScreen() {
   const router = useRouter();
   const [numero, setNumero] = useState('');
   const [tipo, setTipo] = useState<TipoTarjeta>(null);
+  const [cargando, setCargando] = useState(false);
 
   const formatearNumero = (texto: string) => {
     const limpio = texto.replace(/\D/g, '').slice(0, 8);
@@ -24,6 +27,30 @@ export default function VincularScreen() {
 
   const colorTarjeta = tipo === 'rapipass' ? '#FF6B00' : tipo === 'metro' ? '#003087' : '#141830';
   const nombreTarjeta = tipo === 'rapipass' ? 'RapiPass · Terminal + MetroBus + Metro' : tipo === 'metro' ? 'Metro + MetroBus · Ciudad de Panamá' : 'Selecciona tu tipo de tarjeta';
+
+  const handleVincular = async () => {
+    if (!listo) return;
+
+    setCargando(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        Alert.alert('Error', 'No hay sesión activa');
+        return;
+      }
+
+      const numeroLimpio = numero.replace(/\s/g, '');
+      await vincularTarjeta(user.id, numeroLimpio);
+
+      Alert.alert('¡Listo!', 'Tarjeta vinculada correctamente');
+      router.push('/saldo');
+
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo vincular la tarjeta');
+    } finally {
+      setCargando(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -102,10 +129,12 @@ export default function VincularScreen() {
 
           <TouchableOpacity
             style={[styles.btnPrimary, !listo && styles.btnDisabled]}
-            onPress={() => router.push('/saldo')}
-            disabled={!listo}
+            onPress={handleVincular}
+            disabled={!listo || cargando}
           >
-            <Text style={styles.btnPrimaryText}>Vincular tarjeta →</Text>
+            <Text style={styles.btnPrimaryText}>
+              {cargando ? 'Vinculando...' : 'Vincular tarjeta →'}
+            </Text>
           </TouchableOpacity>
 
         </View>

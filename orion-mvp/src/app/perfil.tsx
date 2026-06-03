@@ -1,10 +1,34 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { usuario } from '@/datos';
+import { useEffect, useState } from 'react';
+import { supabase } from '../../lib/supabase';
 import BottomNav from '@/components/BottomNav';
 
 export default function PerfilScreen() {
   const router = useRouter();
+  const [usuario, setUsuario] = useState({ nombre: '', correo: '' });
+
+  useEffect(() => {
+    cargarPerfil();
+  }, []);
+
+  const cargarPerfil = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data } = await supabase
+      .from('usuarios')
+      .select('nombre, correo')
+      .eq('id', user.id)
+      .single();
+
+    if (data) setUsuario(data);
+  };
+
+  const cerrarSesion = async () => {
+    await supabase.auth.signOut();
+    router.push('/');
+  };
 
   return (
     <View style={styles.container}>
@@ -22,7 +46,7 @@ export default function PerfilScreen() {
           <View style={styles.avatarArea}>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>
-                {usuario.nombre.charAt(0)}
+                {usuario.nombre ? usuario.nombre.charAt(0) : '?'}
               </Text>
             </View>
             <Text style={styles.nombre}>{usuario.nombre}</Text>
@@ -69,10 +93,7 @@ export default function PerfilScreen() {
             </TouchableOpacity>
           ))}
 
-          <TouchableOpacity
-            style={styles.btnCerrar}
-            onPress={() => router.push('/')}
-          >
+          <TouchableOpacity style={styles.btnCerrar} onPress={cerrarSesion}>
             <Text style={styles.btnCerrarText}>Cerrar sesión</Text>
           </TouchableOpacity>
 
@@ -123,13 +144,4 @@ const styles = StyleSheet.create({
     padding: 14, alignItems: 'center', marginTop: 24,
   },
   btnCerrarText: { color: '#FF4444', fontSize: 13, fontWeight: '600' },
-  bottomNav: {
-    flexDirection: 'row', justifyContent: 'space-around',
-    paddingVertical: 12, borderTopWidth: 0.5, borderTopColor: '#141830',
-  },
-  navItem: { alignItems: 'center', gap: 2 },
-  navItemIcon: { fontSize: 18 },
-  navItemText: { fontSize: 10, color: '#8899AA' },
-  navItemActive: { color: '#0066CC' },
-  navDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#0066CC', marginTop: 1 },
 });

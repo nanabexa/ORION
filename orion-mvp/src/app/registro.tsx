@@ -1,6 +1,7 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
+import { supabase } from '../../lib/supabase';
 
 export default function RegistroScreen() {
   const router = useRouter();
@@ -8,8 +9,43 @@ export default function RegistroScreen() {
   const [correo, setCorreo] = useState('');
   const [password, setPassword] = useState('');
   const [confirmar, setConfirmar] = useState('');
+  const [cargando, setCargando] = useState(false);
 
   const listo = nombre && correo && password && confirmar && password === confirmar;
+
+  const handleRegistro = async () => {
+    if (!listo) return;
+
+    setCargando(true);
+    try {
+      // 1. Crear usuario en Supabase Auth
+      const { data, error } = await supabase.auth.signUp({
+        email: correo,
+        password: password,
+      });
+
+      if (error) {
+        Alert.alert('Error', error.message);
+        return;
+      }
+
+      // 2. Guardar nombre en tabla usuarios
+      if (data.user) {
+        await supabase.from('usuarios').insert({
+          id: data.user.id,
+          nombre: nombre,
+          correo: correo,
+        });
+      }
+
+      router.push('/saldo' as any);
+
+    } catch (e) {
+      Alert.alert('Error', 'No se pudo crear la cuenta');
+    } finally {
+      setCargando(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -80,10 +116,12 @@ export default function RegistroScreen() {
 
           <TouchableOpacity
             style={[styles.btnPrimary, !listo && styles.btnDisabled]}
-            onPress={() => router.push('/saldo' as any)}
-            disabled={!listo}
+            onPress={handleRegistro}
+            disabled={!listo || cargando}
           >
-            <Text style={styles.btnPrimaryText}>Crear cuenta →</Text>
+            <Text style={styles.btnPrimaryText}>
+              {cargando ? 'Creando cuenta...' : 'Crear cuenta →'}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity onPress={() => router.back()}>

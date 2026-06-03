@@ -1,10 +1,44 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { usuario, saldo as saldoData, recargas } from '../datos';
+import { useEffect, useState } from 'react';
+import { supabase } from '../../lib/supabase';
 import BottomNav from '@/components/BottomNav';
 
 export default function SaldoScreen() {
   const router = useRouter();
+  const [tarjeta, setTarjeta] = useState<any>(null);
+  const [recargas, setRecargas] = useState<any[]>([]);
+
+  useEffect(() => {
+    cargarDatos();
+  }, []);
+
+  const cargarDatos = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Obtener tarjeta activa
+    const { data: tarjetas } = await supabase
+      .from('tarjetas')
+      .select('*')
+      .eq('usuario_id', user.id)
+      .eq('activa', true)
+      .limit(1);
+
+    if (tarjetas && tarjetas.length > 0) {
+      setTarjeta(tarjetas[0]);
+    }
+
+    // Obtener últimas recargas
+    const { data: historial } = await supabase
+      .from('recargas')
+      .select('*')
+      .eq('usuario_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    if (historial) setRecargas(historial);
+  };
 
   return (
     <View style={styles.container}>
@@ -19,11 +53,15 @@ export default function SaldoScreen() {
           <Text style={styles.balanceLabel}>Saldo disponible</Text>
           <Text style={styles.balanceAmount}>
             <Text style={styles.balanceCurrency}>B/. </Text>
-            {saldoData.disponible.toFixed(2)}
+            {tarjeta ? tarjeta.saldo.toFixed(2) : '0.00'}
           </Text>
-          <Text style={styles.cardNumber}>Tarjeta •••• {usuario.tarjeta}</Text>
+          <Text style={styles.cardNumber}>
+            Tarjeta •••• {tarjeta ? tarjeta.numero_tarjeta.slice(-4) : '----'}
+          </Text>
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>✦ {saldoData.estado}</Text>
+            <Text style={styles.badgeText}>
+              ✦ {tarjeta ? 'Activa' : 'Sin tarjeta'}
+            </Text>
           </View>
         </View>
 
@@ -44,15 +82,21 @@ export default function SaldoScreen() {
               </View>
               <View>
                 <Text style={styles.txInfo}>Recarga digital</Text>
-                <Text style={styles.txDate}>{recarga.fecha} · {recarga.estado}</Text>
+                <Text style={styles.txDate}>
+                  {new Date(recarga.created_at).toLocaleDateString('es')} · {recarga.estado}
+                </Text>
               </View>
             </View>
             <Text style={styles.txAmount}>+B/.{recarga.monto.toFixed(2)}</Text>
           </View>
         ))}
+
+        {recargas.length === 0 && (
+          <Text style={styles.sinRecargas}>No hay recargas aún</Text>
+        )}
+
       </ScrollView>
-        <BottomNav activa="inicio" />
-      
+      <BottomNav activa="inicio" />
     </View>
   );
 }
@@ -107,13 +151,5 @@ const styles = StyleSheet.create({
   txInfo: { fontSize: 12, color: '#FFFFFF' },
   txDate: { fontSize: 10, color: '#8899AA', marginTop: 2 },
   txAmount: { fontSize: 13, fontWeight: '700', color: '#C8D400' },
-  bottomNav: {
-    flexDirection: 'row', justifyContent: 'space-around',
-    paddingVertical: 12, borderTopWidth: 0.5, borderTopColor: '#141830',
-  },
-  navItem: { alignItems: 'center', gap: 2 },
-  navItemIcon: { fontSize: 18 },
-  navItemText: { fontSize: 10, color: '#8899AA' },
-  navItemActive: { color: '#0066CC' },
-  navDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#0066CC', marginTop: 1 },
+  sinRecargas: { fontSize: 12, color: '#8899AA', textAlign: 'center', marginTop: 20 },
 });

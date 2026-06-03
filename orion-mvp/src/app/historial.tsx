@@ -1,9 +1,34 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { recargas } from '../datos';
+import { useEffect, useState } from 'react';
+import { supabase } from '../../lib/supabase';
 import BottomNav from '@/components/BottomNav';
+
 export default function HistorialScreen() {
   const router = useRouter();
+  const [recargas, setRecargas] = useState<any[]>([]);
+  const [total, setTotal] = useState(0);
+
+  useEffect(() => {
+    cargarHistorial();
+  }, []);
+
+  const cargarHistorial = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('recargas')
+      .select('*')
+      .eq('usuario_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (!error && data) {
+      setRecargas(data);
+      const suma = data.reduce((acc, r) => acc + r.monto, 0);
+      setTotal(suma);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -20,17 +45,19 @@ export default function HistorialScreen() {
 
           <View style={styles.resumenCard}>
             <View style={styles.resumenItem}>
-              <Text style={styles.resumenValor}>3</Text>
+              <Text style={styles.resumenValor}>{recargas.length}</Text>
               <Text style={styles.resumenLabel}>Recargas</Text>
             </View>
             <View style={styles.resumenDivider} />
             <View style={styles.resumenItem}>
-              <Text style={styles.resumenValor}>B/.35.00</Text>
+              <Text style={styles.resumenValor}>B/.{total.toFixed(2)}</Text>
               <Text style={styles.resumenLabel}>Total recargado</Text>
             </View>
             <View style={styles.resumenDivider} />
             <View style={styles.resumenItem}>
-              <Text style={styles.resumenValor}>Mayo</Text>
+              <Text style={styles.resumenValor}>
+                {new Date().toLocaleString('es', { month: 'long' })}
+              </Text>
               <Text style={styles.resumenLabel}>Este mes</Text>
             </View>
           </View>
@@ -45,7 +72,7 @@ export default function HistorialScreen() {
                 </View>
                 <View>
                   <Text style={styles.txInfo}>Recarga digital</Text>
-                  <Text style={styles.txDate}>{recarga.fecha}</Text>
+                  <Text style={styles.txDate}>{new Date(recarga.created_at).toLocaleDateString('es')}</Text>
                   <View style={styles.txBadge}>
                     <Text style={styles.txBadgeText}>✦ {recarga.estado}</Text>
                   </View>
@@ -102,13 +129,4 @@ const styles = StyleSheet.create({
   },
   txBadgeText: { fontSize: 9, color: '#C8D400' },
   txAmount: { fontSize: 14, fontWeight: '700', color: '#C8D400' },
-  bottomNav: {
-    flexDirection: 'row', justifyContent: 'space-around',
-    paddingVertical: 12, borderTopWidth: 0.5, borderTopColor: '#141830',
-  },
-  navItem: { alignItems: 'center', gap: 2 },
-  navItemIcon: { fontSize: 18 },
-  navItemText: { fontSize: 10, color: '#8899AA' },
-  navItemActive: { color: '#0066CC' },
-  navDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#0066CC', marginTop: 1 },
 });

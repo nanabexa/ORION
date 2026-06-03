@@ -1,15 +1,25 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { supabase } from '../../lib/supabase';
+import { getTarjetas } from '../../lib/tarjetas';
 import BottomNav from '@/components/BottomNav';
 
 export default function TarjetasScreen() {
   const router = useRouter();
+  const [tarjetas, setTarjetas] = useState<any[]>([]);
 
-  // Simula tarjetas vinculadas — vacío para mostrar estado sin tarjetas
-  const [tarjetas] = useState([
-    // { id: '1', numero: '1234 5678', tipo: 'RapiPass' },
-  ]);
+  useEffect(() => {
+    cargarTarjetas();
+  }, []);
+
+  const cargarTarjetas = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const data = await getTarjetas(user.id);
+    if (data) setTarjetas(data);
+  };
 
   return (
     <View style={styles.container}>
@@ -43,8 +53,12 @@ export default function TarjetasScreen() {
               {tarjetas.map((tarjeta: any) => (
                 <View key={tarjeta.id} style={styles.tarjetaCard}>
                   <View style={styles.tarjetaChip} />
-                  <Text style={styles.tarjetaNumero}>{tarjeta.numero}</Text>
-                  <Text style={styles.tarjetaTipo}>{tarjeta.tipo}</Text>
+                  <Text style={styles.tarjetaNumero}>
+                    •••• •••• •••• {tarjeta.numero_tarjeta.slice(-4)}
+                  </Text>
+                  <Text style={styles.tarjetaTipo}>
+                    Saldo: B/. {tarjeta.saldo.toFixed(2)}
+                  </Text>
                 </View>
               ))}
               <TouchableOpacity
@@ -106,13 +120,4 @@ const styles = StyleSheet.create({
     borderRadius: 10, padding: 14, alignItems: 'center',
   },
   btnSecondaryText: { color: '#C8D400', fontSize: 13 },
-  bottomNav: {
-    flexDirection: 'row', justifyContent: 'space-around',
-    paddingVertical: 12, borderTopWidth: 0.5, borderTopColor: '#141830',
-  },
-  navItem: { alignItems: 'center', gap: 2 },
-  navItemIcon: { fontSize: 18 },
-  navItemText: { fontSize: 10, color: '#8899AA' },
-  navItemActive: { color: '#0066CC' },
-  navDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#0066CC', marginTop: 1 },
 });

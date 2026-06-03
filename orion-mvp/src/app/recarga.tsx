@@ -1,6 +1,9 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Platform, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
+import { supabase } from '../../lib/supabase';
+import { procesarRecarga } from '../../lib/recargas';
+import { simularPago } from '../../lib/pagos';
 
 const detectarNFC = () => {
   if (Platform.OS === 'web') return 'sin-nfc';
@@ -26,21 +29,62 @@ export default function RecargaScreen() {
     return (num / 100).toFixed(2);
   };
 
-  const confirmarRecarga = () => {
+  const confirmarRecarga = async () => {
     if (parseInt(monto) <= 0) return;
+
     setEstado('procesando');
     setEstadoTracker(1);
-    setTimeout(() => {
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        Alert.alert('Error', 'No hay sesión activa');
+        setEstado('formulario');
+        return;
+      }
+
+      // Obtener tarjeta del usuario
+      const { data: tarjetas } = await supabase
+        .from('tarjetas')
+        .select('id')
+        .eq('usuario_id', user.id)
+        .eq('activa', true)
+        .limit(1);
+
+      if (!tarjetas || tarjetas.length === 0) {
+        Alert.alert('Error', 'No tienes tarjetas vinculadas');
+        setEstado('formulario');
+        return;
+      }
+
+      const montoReal = parseFloat(formatearMonto());
+
       setEstadoTracker(2);
-      setTimeout(() => {
-        setEstadoTracker(3);
-        if (estadoNFC === 'nfc-activo') {
-          setEstado('nfc-espera');
-        } else {
-          setEstado('resultado');
-        }
-      }, 1500);
-    }, 1500);
+
+      // Simular pago
+      const resultadoPago = await simularPago(montoReal, metodoPago);
+
+      if (!resultadoPago.aprobado) {
+        Alert.alert('Pago rechazado', resultadoPago.mensaje);
+        setEstado('formulario');
+        return;
+      }
+
+      setEstadoTracker(3);
+
+      // Procesar recarga real en Supabase
+      await procesarRecarga(user.id, tarjetas[0].id, montoReal, metodoPago);
+
+      if (estadoNFC === 'nfc-activo') {
+        setEstado('nfc-espera');
+      } else {
+        setEstado('resultado');
+      }
+
+    } catch (error) {
+      Alert.alert('Error', 'Hubo un problema al procesar la recarga');
+      setEstado('formulario');
+    }
   };
 
   if (estado === 'nfc-espera') {
@@ -238,14 +282,11 @@ function PantallaResultado({ monto, estadoNFC, onVolver }: {
       </View>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.resultScreen}>
-
           <View style={[styles.resultIcon, { borderColor: config.borderColor, backgroundColor: `${config.borderColor}22` }]}>
             <Text style={styles.resultIconText}>{config.icon}</Text>
           </View>
-
           <Text style={[styles.resultTitle, { color: config.borderColor }]}>{config.titulo}</Text>
           <Text style={styles.resultSubtitle}>{config.subtitulo}</Text>
-
           <View style={styles.amountBox}>
             <Text style={styles.amountLabel}>Monto recargado</Text>
             <Text style={styles.amountValue}>B/. {monto}</Text>
@@ -253,7 +294,6 @@ function PantallaResultado({ monto, estadoNFC, onVolver }: {
               Tarjeta •••• 4821 · {estadoNFC === 'nfc-activo' ? 'Sincronizado ✦' : 'Pendiente sync'}
             </Text>
           </View>
-
           <View style={[styles.statusBox, { borderColor: config.borderColor, backgroundColor: `${config.borderColor}15` }]}>
             <Text style={styles.statusIcon}>💳</Text>
             <View style={styles.statusText}>
@@ -261,21 +301,18 @@ function PantallaResultado({ monto, estadoNFC, onVolver }: {
               <Text style={styles.statusDesc}>{config.badgeDesc}</Text>
             </View>
           </View>
-
           <TouchableOpacity
             style={[styles.btnPrimary, { backgroundColor: config.btnColor }]}
             onPress={onVolver}
           >
             <Text style={[styles.btnPrimaryText, { color: config.btnText }]}>Ir al inicio →</Text>
           </TouchableOpacity>
-
           <TouchableOpacity
             style={styles.btnHistorial}
             onPress={() => router.push('/historial' as any)}
           >
             <Text style={styles.btnHistorialText}>Ver historial</Text>
           </TouchableOpacity>
-
         </View>
       </ScrollView>
     </View>
