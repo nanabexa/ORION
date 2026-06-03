@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { supabase } from './supabase';
 
 export const procesarRecarga = async (
   usuarioId: string,
@@ -40,7 +40,7 @@ export const procesarRecarga = async (
 
   await supabase
     .from('tarjetas')
-    .update({ saldo: tarjeta.saldo + monto })
+    .update({ saldo: (tarjeta?.saldo ?? 0) + monto })
     .eq('id', tarjetaId);
 
   // 5. Actualizar a SINCRONIZADA

@@ -7,13 +7,31 @@ export default function LoginScreen() {
   const router = useRouter();
   const [correo, setCorreo] = useState('');
   const [password, setPassword] = useState('');
+  const [verPassword, setVerPassword] = useState(false);
   const [cargando, setCargando] = useState(false);
+  const [errorCorreo, setErrorCorreo] = useState('');
+  const [errorPassword, setErrorPassword] = useState('');
+
+  const validarCorreo = (texto: string) => {
+    if (!texto) return 'El correo es requerido';
+    if (!texto.includes('@') || !texto.includes('.')) return 'Correo no válido';
+    return '';
+  };
+
+  const validarPassword = (texto: string) => {
+    if (!texto) return 'La contraseña es requerida';
+    if (texto.length < 6) return 'Mínimo 6 caracteres';
+    return '';
+  };
 
   const handleLogin = async () => {
-    if (!correo || !password) {
-      Alert.alert('Error', 'Completa todos los campos');
-      return;
-    }
+    const errCorreo = validarCorreo(correo);
+    const errPass = validarPassword(password);
+
+    setErrorCorreo(errCorreo);
+    setErrorPassword(errPass);
+
+    if (errCorreo || errPass) return;
 
     setCargando(true);
     const { error } = await supabase.auth.signInWithPassword({
@@ -63,24 +81,37 @@ export default function LoginScreen() {
 
       <Text style={styles.label}>Correo</Text>
       <TextInput
-        style={styles.input}
+        style={[styles.input, errorCorreo ? styles.inputError : null]}
         value={correo}
-        onChangeText={setCorreo}
+        onChangeText={(texto) => {
+          setCorreo(texto);
+          setErrorCorreo('');
+        }}
         placeholder="usuario@email.com"
         placeholderTextColor="#8899AA"
         keyboardType="email-address"
         autoCapitalize="none"
       />
+      {errorCorreo ? <Text style={styles.errorText}>{errorCorreo}</Text> : null}
 
       <Text style={styles.label}>Contraseña</Text>
-      <TextInput
-        style={styles.input}
-        value={password}
-        onChangeText={setPassword}
-        placeholder="••••••••"
-        placeholderTextColor="#8899AA"
-        secureTextEntry
-      />
+      <View style={[styles.inputWrap, errorPassword ? styles.inputError : null]}>
+        <TextInput
+          style={styles.inputFlex}
+          value={password}
+          onChangeText={(texto) => {
+            setPassword(texto);
+            setErrorPassword('');
+          }}
+          placeholder="••••••••"
+          placeholderTextColor="#8899AA"
+          secureTextEntry={!verPassword}
+        />
+        <TouchableOpacity onPress={() => setVerPassword(!verPassword)}>
+          <Text style={styles.eyeIcon}>{verPassword ? '🙈' : '👁'}</Text>
+        </TouchableOpacity>
+      </View>
+      {errorPassword ? <Text style={styles.errorText}>{errorPassword}</Text> : null}
 
       <TouchableOpacity
         style={styles.btnPrimary}
@@ -149,6 +180,15 @@ const styles = StyleSheet.create({
     borderColor: '#1E2A50', borderRadius: 10, padding: 13,
     fontSize: 13, color: '#FFFFFF',
   },
+  inputWrap: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#141830', borderWidth: 0.5,
+    borderColor: '#1E2A50', borderRadius: 10, padding: 13,
+  },
+  inputFlex: { flex: 1, fontSize: 13, color: '#FFFFFF' },
+  inputError: { borderColor: '#FF4444' },
+  errorText: { fontSize: 11, color: '#FF4444', marginTop: 4, marginBottom: 4 },
+  eyeIcon: { fontSize: 16, paddingLeft: 8 },
   btnPrimary: {
     backgroundColor: '#0066CC', borderRadius: 10,
     padding: 14, alignItems: 'center', marginTop: 20, marginBottom: 14,
