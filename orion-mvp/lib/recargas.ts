@@ -1,58 +1,56 @@
-import { supabase } from './supabase'
+import { supabase } from '@/lib/supabase';
 
-export async function crearRecarga(tarjetaId: number, monto: number) {
-  const { data, error } = await supabase
+export const procesarRecarga = async (
+  usuarioId: string,
+  tarjetaId: string,
+  monto: number,
+  metodoPago: string
+) => {
+
+  // 1. Insertar con estado PENDIENTE
+  const { data: recarga, error: errorInsert } = await supabase
     .from('recargas')
     .insert({
+      usuario_id: usuarioId,
       tarjeta_id: tarjetaId,
       monto,
-      estado: 'PENDIENTE',
+      metodo_pago: metodoPago,
+      estado: 'PENDIENTE'
     })
     .select()
-    .single()
+    .single();
 
-  if (error) throw error
-  return data
-}
+  if (errorInsert) throw errorInsert;
 
-export async function aprobarRecarga(recargaId: number) {
-  const { data: recarga, error: fetchError } = await supabase
-    .from('recargas')
-    .select('tarjeta_id, monto')
-    .eq('id', recargaId)
-    .single()
+  // 2. Simular aprobación del banco (2 segundos)
+  await new Promise(resolve => setTimeout(resolve, 2000));
 
-  if (fetchError) throw fetchError
-
-  const { error: recargaError } = await supabase
+  // 3. Actualizar a APROBADA
+  await supabase
     .from('recargas')
     .update({ estado: 'APROBADA' })
-    .eq('id', recargaId)
+    .eq('id', recarga.id);
 
-  if (recargaError) throw recargaError
+  // 4. Sumar saldo a la tarjeta
+  const { data: tarjeta } = await supabase
+    .from('tarjetas')
+    .select('saldo')
+    .eq('id', tarjetaId)
+    .single();
 
-  const { error: saldoError } = await supabase.rpc('sumar_saldo', {
-    p_tarjeta_id: recarga.tarjeta_id,
-    p_monto: recarga.monto,
-  })
+  await supabase
+    .from('tarjetas')
+    .update({ saldo: tarjeta.saldo + monto })
+    .eq('id', tarjetaId);
 
-  if (saldoError) throw saldoError
-}
-
-export async function sincronizarRecarga(recargaId: number) {
-  const { error } = await supabase
+  // 5. Actualizar a SINCRONIZADA
+  const { data: final, error: errorFinal } = await supabase
     .from('recargas')
     .update({ estado: 'SINCRONIZADA' })
-    .eq('id', recargaId)
+    .eq('id', recarga.id)
+    .select()
+    .single();
 
-  if (error) throw error
-}
-
-export async function rechazarRecarga(recargaId: number) {
-  const { error } = await supabase
-    .from('recargas')
-    .update({ estado: 'RECHAZADA' })
-    .eq('id', recargaId)
-
-  if (error) throw error
-}
+  if (errorFinal) throw errorFinal;
+  return final;
+};
