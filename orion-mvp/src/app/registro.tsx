@@ -9,16 +9,53 @@ export default function RegistroScreen() {
   const [correo, setCorreo] = useState('');
   const [password, setPassword] = useState('');
   const [confirmar, setConfirmar] = useState('');
+  const [verPassword, setVerPassword] = useState(false);
+  const [verConfirmar, setVerConfirmar] = useState(false);
   const [cargando, setCargando] = useState(false);
+  const [errorNombre, setErrorNombre] = useState('');
+  const [errorCorreo, setErrorCorreo] = useState('');
+  const [errorPassword, setErrorPassword] = useState('');
+  const [errorConfirmar, setErrorConfirmar] = useState('');
 
-  const listo = nombre && correo && password && confirmar && password === confirmar;
+  const validarNombre = (texto: string) => {
+    if (!texto) return 'El nombre es requerido';
+    if (texto.length < 3) return 'Mínimo 3 caracteres';
+    return '';
+  };
+
+  const validarCorreo = (texto: string) => {
+    if (!texto) return 'El correo es requerido';
+    if (!texto.includes('@') || !texto.includes('.')) return 'Correo no válido';
+    return '';
+  };
+
+  const validarPassword = (texto: string) => {
+    if (!texto) return 'La contraseña es requerida';
+    if (texto.length < 6) return 'Mínimo 6 caracteres';
+    return '';
+  };
+
+  const validarConfirmar = (texto: string) => {
+    if (!texto) return 'Confirma tu contraseña';
+    if (texto !== password) return 'Las contraseñas no coinciden';
+    return '';
+  };
 
   const handleRegistro = async () => {
-    if (!listo) return;
+    const errNombre = validarNombre(nombre);
+    const errCorreo = validarCorreo(correo);
+    const errPass = validarPassword(password);
+    const errConfirmar = validarConfirmar(confirmar);
+
+    setErrorNombre(errNombre);
+    setErrorCorreo(errCorreo);
+    setErrorPassword(errPass);
+    setErrorConfirmar(errConfirmar);
+
+    if (errNombre || errCorreo || errPass || errConfirmar) return;
 
     setCargando(true);
     try {
-      // 1. Crear usuario en Supabase Auth
       const { data, error } = await supabase.auth.signUp({
         email: correo,
         password: password,
@@ -29,7 +66,6 @@ export default function RegistroScreen() {
         return;
       }
 
-      // 2. Guardar nombre en tabla usuarios
       if (data.user) {
         await supabase.from('usuarios').insert({
           id: data.user.id,
@@ -37,6 +73,12 @@ export default function RegistroScreen() {
           correo: correo,
         });
       }
+
+      Alert.alert(
+        '¡Cuenta creada!',
+        'Te enviamos un correo de confirmación. Revisa tu bandeja de entrada antes de iniciar sesión.',
+        [{ text: 'OK', onPress: () => router.push('/' as any) }]
+      );
 
       router.push('/saldo' as any);
 
@@ -73,51 +115,74 @@ export default function RegistroScreen() {
 
           <Text style={styles.label}>Nombre completo</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, errorNombre ? styles.inputError : null]}
             value={nombre}
-            onChangeText={setNombre}
+            onChangeText={(texto) => {
+              setNombre(texto);
+              setErrorNombre('');
+            }}
             placeholder="Viviana Nieto"
             placeholderTextColor="#8899AA"
           />
+          {errorNombre ? <Text style={styles.errorText}>{errorNombre}</Text> : null}
 
           <Text style={styles.label}>Correo</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, errorCorreo ? styles.inputError : null]}
             value={correo}
-            onChangeText={setCorreo}
+            onChangeText={(texto) => {
+              setCorreo(texto);
+              setErrorCorreo('');
+            }}
             placeholder="usuario@email.com"
             placeholderTextColor="#8899AA"
             keyboardType="email-address"
             autoCapitalize="none"
           />
+          {errorCorreo ? <Text style={styles.errorText}>{errorCorreo}</Text> : null}
 
           <Text style={styles.label}>Contraseña</Text>
-          <TextInput
-            style={styles.input}
-            value={password}
-            onChangeText={setPassword}
-            placeholder="••••••••"
-            placeholderTextColor="#8899AA"
-            secureTextEntry
-          />
+          <View style={[styles.inputWrap, errorPassword ? styles.inputError : null]}>
+            <TextInput
+              style={styles.inputFlex}
+              value={password}
+              onChangeText={(texto) => {
+                setPassword(texto);
+                setErrorPassword('');
+              }}
+              placeholder="••••••••"
+              placeholderTextColor="#8899AA"
+              secureTextEntry={!verPassword}
+            />
+            <TouchableOpacity onPress={() => setVerPassword(!verPassword)}>
+              <Text style={styles.eyeIcon}>{verPassword ? '🙈' : '👁'}</Text>
+            </TouchableOpacity>
+          </View>
+          {errorPassword ? <Text style={styles.errorText}>{errorPassword}</Text> : null}
 
           <Text style={styles.label}>Confirmar contraseña</Text>
-          <TextInput
-            style={[styles.input, confirmar && password !== confirmar && styles.inputError]}
-            value={confirmar}
-            onChangeText={setConfirmar}
-            placeholder="••••••••"
-            placeholderTextColor="#8899AA"
-            secureTextEntry
-          />
-          {confirmar && password !== confirmar && (
-            <Text style={styles.errorText}>Las contraseñas no coinciden</Text>
-          )}
+          <View style={[styles.inputWrap, errorConfirmar ? styles.inputError : null]}>
+            <TextInput
+              style={styles.inputFlex}
+              value={confirmar}
+              onChangeText={(texto) => {
+                setConfirmar(texto);
+                setErrorConfirmar('');
+              }}
+              placeholder="••••••••"
+              placeholderTextColor="#8899AA"
+              secureTextEntry={!verConfirmar}
+            />
+            <TouchableOpacity onPress={() => setVerConfirmar(!verConfirmar)}>
+              <Text style={styles.eyeIcon}>{verConfirmar ? '🙈' : '👁'}</Text>
+            </TouchableOpacity>
+          </View>
+          {errorConfirmar ? <Text style={styles.errorText}>{errorConfirmar}</Text> : null}
 
           <TouchableOpacity
-            style={[styles.btnPrimary, !listo && styles.btnDisabled]}
+            style={[styles.btnPrimary, cargando && styles.btnDisabled]}
             onPress={handleRegistro}
-            disabled={!listo || cargando}
+            disabled={cargando}
           >
             <Text style={styles.btnPrimaryText}>
               {cargando ? 'Creando cuenta...' : 'Crear cuenta →'}
@@ -167,8 +232,15 @@ const styles = StyleSheet.create({
     borderColor: '#1E2A50', borderRadius: 10, padding: 13,
     fontSize: 13, color: '#FFFFFF',
   },
+  inputWrap: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#141830', borderWidth: 0.5,
+    borderColor: '#1E2A50', borderRadius: 10, padding: 13,
+  },
+  inputFlex: { flex: 1, fontSize: 13, color: '#FFFFFF' },
   inputError: { borderColor: '#FF4444' },
-  errorText: { fontSize: 11, color: '#FF4444', marginTop: 4 },
+  errorText: { fontSize: 11, color: '#FF4444', marginTop: 4, marginBottom: 4 },
+  eyeIcon: { fontSize: 16, paddingLeft: 8 },
   btnPrimary: {
     backgroundColor: '#0066CC', borderRadius: 10,
     padding: 14, alignItems: 'center', marginTop: 24, marginBottom: 14,

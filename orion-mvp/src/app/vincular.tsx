@@ -33,20 +33,29 @@ export default function VincularScreen() {
 
     setCargando(true);
     try {
+      console.log('1 - iniciando');
       const { data: { user } } = await supabase.auth.getUser();
+      console.log('2 - usuario:', user?.id);
+
       if (!user) {
         Alert.alert('Error', 'No hay sesión activa');
+        setCargando(false);
         return;
       }
 
       const numeroLimpio = numero.replace(/\s/g, '');
-      await vincularTarjeta(user.id, numeroLimpio);
+      console.log('3 - numero:', numeroLimpio);
 
-      Alert.alert('¡Listo!', 'Tarjeta vinculada correctamente');
-      router.push('/saldo');
+      const resultado = await vincularTarjeta(user.id, numeroLimpio);
+      console.log('4 - resultado:', resultado);
 
-    } catch (error) {
-      Alert.alert('Error', 'No se pudo vincular la tarjeta');
+      Alert.alert('¡Listo!', 'Tarjeta vinculada correctamente', [
+        { text: 'OK', onPress: () => router.push('/tarjetas' as any) }
+      ]);
+
+    } catch (error: any) {
+      console.log('ERROR:', error);
+      Alert.alert('Error', error?.message || JSON.stringify(error));
     } finally {
       setCargando(false);
     }
