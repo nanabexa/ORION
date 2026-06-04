@@ -1,43 +1,51 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { useState, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import BottomNav from '@/components/BottomNav';
+import { colors } from '../theme/colors';
+import { common } from '../theme/components';
 
 export default function SaldoScreen() {
   const router = useRouter();
-  const [tarjeta, setTarjeta] = useState<any>(null);
+  const [tarjetas, setTarjetas] = useState<any[]>([]);
+  const [tarjetaSeleccionada, setTarjetaSeleccionada] = useState<any>(null);
   const [recargas, setRecargas] = useState<any[]>([]);
 
-  useEffect(() => {
-    cargarDatos();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      cargarDatos();
+    }, [])
+  );
 
   const cargarDatos = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    // Obtener tarjeta activa
-    const { data: tarjetas } = await supabase
-      .from('tarjetas')
-      .select('*')
-      .eq('usuario_id', user.id)
-      .eq('activa', true)
-      .limit(1);
+    const { data: listaTarjetas } = await supabase
+      .from('tarjetas').select('*')
+      .eq('usuario_id', user.id).eq('activa', true);
 
-    if (tarjetas && tarjetas.length > 0) {
-      setTarjeta(tarjetas[0]);
+    if (listaTarjetas && listaTarjetas.length > 0) {
+      setTarjetas(listaTarjetas);
+      setTarjetaSeleccionada(listaTarjetas[0]);
+      await cargarRecargas(user.id, listaTarjetas[0].id);
     }
+  };
 
-    // Obtener últimas recargas
+  const cargarRecargas = async (userId: string, tarjetaId: string) => {
     const { data: historial } = await supabase
-      .from('recargas')
-      .select('*')
-      .eq('usuario_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(5);
+      .from('recargas').select('*')
+      .eq('usuario_id', userId).eq('tarjeta_id', tarjetaId)
+      .order('created_at', { ascending: false }).limit(5);
 
     if (historial) setRecargas(historial);
+  };
+
+  const seleccionarTarjeta = async (t: any) => {
+    setTarjetaSeleccionada(t);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) await cargarRecargas(user.id, t.id);
   };
 
   return (
@@ -48,27 +56,50 @@ export default function SaldoScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
+
+        {tarjetas.length > 1 && (
+          <ScrollView
+            horizontal showsHorizontalScrollIndicator={false}
+            style={styles.selectorWrap} contentContainerStyle={styles.selectorContent}
+          >
+            {tarjetas.map((t) => (
+              <TouchableOpacity
+                key={t.id}
+                style={[styles.selectorItem, tarjetaSeleccionada?.id === t.id && styles.selectorItemActive]}
+                onPress={() => seleccionarTarjeta(t)}
+              >
+                <Text style={[styles.selectorText, tarjetaSeleccionada?.id === t.id && styles.selectorTextActive]}>
+                  {t.numero_tarjeta}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
+
         <View style={styles.balanceCard}>
           <View style={styles.cardGlow} />
           <Text style={styles.balanceLabel}>Saldo disponible</Text>
           <Text style={styles.balanceAmount}>
             <Text style={styles.balanceCurrency}>B/. </Text>
-            {tarjeta ? tarjeta.saldo.toFixed(2) : '0.00'}
+            {tarjetaSeleccionada ? tarjetaSeleccionada.saldo.toFixed(2) : '0.00'}
           </Text>
           <Text style={styles.cardNumber}>
-            Tarjeta •••• {tarjeta ? tarjeta.numero_tarjeta.slice(-4) : '----'}
+            Tarjeta {tarjetaSeleccionada ? tarjetaSeleccionada.numero_tarjeta : '--------'}
           </Text>
           <View style={styles.badge}>
             <Text style={styles.badgeText}>
-              ✦ {tarjeta ? 'Activa' : 'Sin tarjeta'}
+              ✦ {tarjetaSeleccionada ? 'Activa' : 'Sin tarjeta'}
             </Text>
           </View>
         </View>
 
-        <TouchableOpacity
-          style={styles.btnPrimary}
-          onPress={() => router.push('/recarga')}
-        >
+        {!tarjetaSeleccionada && (
+          <TouchableOpacity style={styles.btnVincular} onPress={() => router.push('/vincular' as any)}>
+            <Text style={styles.btnVincularText}>+ Vincular tarjeta →</Text>
+          </TouchableOpacity>
+        )}
+
+        <TouchableOpacity style={styles.btnPrimary} onPress={() => router.push('/recarga')}>
           <Text style={styles.btnPrimaryText}>+ Recargar tarjeta →</Text>
         </TouchableOpacity>
 
@@ -102,15 +133,25 @@ export default function SaldoScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0A0E1F' },
+  container: { flex: 1, backgroundColor: colors.background },
   navbar: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    padding: 18, paddingTop: 48, borderBottomWidth: 0.5, borderBottomColor: '#141830',
+    padding: 18, paddingTop: 48, borderBottomWidth: 0.5, borderBottomColor: colors.borderLight,
   },
-  navTitle: { fontWeight: '900', fontSize: 16, color: '#FFFFFF', letterSpacing: 3 },
+  navTitle: { fontWeight: '900', fontSize: 16, color: colors.text, letterSpacing: 3 },
   navIcon: { fontSize: 18 },
+  selectorWrap: { marginTop: 14, marginBottom: 4 },
+  selectorContent: { paddingHorizontal: 18, gap: 8 },
+  selectorItem: {
+    paddingHorizontal: 14, paddingVertical: 8,
+    backgroundColor: colors.card, borderRadius: 20,
+    borderWidth: 0.5, borderColor: colors.border,
+  },
+  selectorItemActive: { borderColor: colors.primary, backgroundColor: colors.overlay },
+  selectorText: { fontSize: 12, color: colors.textMuted },
+  selectorTextActive: { color: colors.text, fontWeight: '600' },
   balanceCard: {
-    margin: 18, backgroundColor: '#003087', borderRadius: 14,
+    margin: 18, backgroundColor: colors.primaryCard, borderRadius: 14,
     padding: 20, overflow: 'hidden', position: 'relative',
   },
   cardGlow: {
@@ -118,38 +159,43 @@ const styles = StyleSheet.create({
     width: 100, height: 100, borderRadius: 50,
     backgroundColor: 'rgba(200,212,0,0.08)',
   },
-  balanceLabel: { fontSize: 10, color: 'rgba(255,255,255,0.6)', letterSpacing: 1, textTransform: 'uppercase' },
-  balanceAmount: { fontSize: 32, fontWeight: '900', color: '#FFFFFF', marginVertical: 4 },
-  balanceCurrency: { fontSize: 16, fontWeight: '400', color: 'rgba(255,255,255,0.6)' },
-  cardNumber: { fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 8 },
+  balanceLabel: { fontSize: 10, color: colors.textCard, letterSpacing: 1, textTransform: 'uppercase' },
+  balanceAmount: { fontSize: 32, fontWeight: '900', color: colors.text, marginVertical: 4 },
+  balanceCurrency: { fontSize: 16, fontWeight: '400', color: colors.textCard },
+  cardNumber: { fontSize: 11, color: colors.textFaint, marginTop: 8 },
   badge: {
     alignSelf: 'flex-start', backgroundColor: 'rgba(200,212,0,0.15)',
-    borderWidth: 0.5, borderColor: '#C8D400', borderRadius: 20,
+    borderWidth: 0.5, borderColor: colors.accent, borderRadius: 20,
     paddingHorizontal: 10, paddingVertical: 3, marginTop: 10,
   },
-  badgeText: { fontSize: 10, color: '#C8D400' },
+  badgeText: { fontSize: 10, color: colors.accent },
+  btnVincular: {
+    borderWidth: 0.5, borderColor: colors.accent, borderRadius: 10, padding: 14,
+    alignItems: 'center', marginHorizontal: 18, marginBottom: 10,
+  },
+  btnVincularText: { color: colors.accent, fontSize: 13, fontWeight: '700' },
   btnPrimary: {
-    backgroundColor: '#0066CC', borderRadius: 10, padding: 14,
+    backgroundColor: colors.primary, borderRadius: 10, padding: 14,
     alignItems: 'center', marginHorizontal: 18, marginBottom: 18,
   },
-  btnPrimaryText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+  btnPrimaryText: { color: colors.text, fontSize: 13, fontWeight: '700' },
   sectionTitle: {
-    fontSize: 10, color: '#8899AA', letterSpacing: 1.5,
+    fontSize: 10, color: colors.textMuted, letterSpacing: 1.5,
     textTransform: 'uppercase', marginHorizontal: 18, marginBottom: 8,
   },
   txRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingVertical: 10, paddingHorizontal: 18,
-    borderBottomWidth: 0.5, borderBottomColor: '#141830',
+    borderBottomWidth: 0.5, borderBottomColor: colors.borderLight,
   },
   txLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   txDot: {
     width: 30, height: 30, borderRadius: 15,
-    backgroundColor: '#0F1A35', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.cardDeep, alignItems: 'center', justifyContent: 'center',
   },
-  txDotText: { color: '#0066CC', fontSize: 14, fontWeight: '700' },
-  txInfo: { fontSize: 12, color: '#FFFFFF' },
-  txDate: { fontSize: 10, color: '#8899AA', marginTop: 2 },
-  txAmount: { fontSize: 13, fontWeight: '700', color: '#C8D400' },
-  sinRecargas: { fontSize: 12, color: '#8899AA', textAlign: 'center', marginTop: 20 },
+  txDotText: { color: colors.primary, fontSize: 14, fontWeight: '700' },
+  txInfo: { fontSize: 12, color: colors.text },
+  txDate: { fontSize: 10, color: colors.textMuted, marginTop: 2 },
+  txAmount: { fontSize: 13, fontWeight: '700', color: colors.accent },
+  sinRecargas: { fontSize: 12, color: colors.textMuted, textAlign: 'center', marginTop: 20 },
 });

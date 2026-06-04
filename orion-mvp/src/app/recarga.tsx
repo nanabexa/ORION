@@ -1,9 +1,11 @@
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Platform, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { procesarRecarga } from '../../lib/recargas';
 import { simularPago } from '../../lib/pagos';
+import { colors } from '../theme/colors';
+import { common } from '../theme/components';
 
 const detectarNFC = () => {
   if (Platform.OS === 'web') return 'sin-nfc';
@@ -16,21 +18,57 @@ type Estado = 'formulario' | 'procesando' | 'resultado' | 'nfc-espera' | 'exitos
 type MetodoPago = 'tarjeta' | 'yappy' | 'transferencia';
 type EstadoNFC = 'nfc-activo' | 'nfc-desactivado' | 'sin-nfc';
 
+const MONTO_MAXIMO = 50;
+const MONTO_MINIMO = 1;
+
 export default function RecargaScreen() {
   const router = useRouter();
   const [monto, setMonto] = useState('0');
   const [metodoPago, setMetodoPago] = useState<MetodoPago>('tarjeta');
   const [estado, setEstado] = useState<Estado>('formulario');
   const [estadoTracker, setEstadoTracker] = useState(0);
+  const [tarjetas, setTarjetas] = useState<any[]>([]);
+  const [tarjetaSeleccionada, setTarjetaSeleccionada] = useState<any>(null);
   const estadoNFC: EstadoNFC = detectarNFC();
+
+  useEffect(() => {
+    cargarTarjetas();
+  }, []);
+
+  const cargarTarjetas = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase
+      .from('tarjetas').select('*')
+      .eq('usuario_id', user.id).eq('activa', true);
+    if (data && data.length > 0) {
+      setTarjetas(data);
+      setTarjetaSeleccionada(data[0]);
+    }
+  };
 
   const formatearMonto = () => {
     const num = parseInt(monto || '0', 10);
     return (num / 100).toFixed(2);
   };
 
+  const montoReal = parseFloat(formatearMonto());
+  const montoValido = montoReal >= MONTO_MINIMO && montoReal <= MONTO_MAXIMO;
+
   const confirmarRecarga = async () => {
-    if (parseInt(monto) <= 0) return;
+    if (!montoValido) return;
+
+    if (!tarjetaSeleccionada) {
+      Alert.alert(
+        'Sin tarjeta vinculada',
+        '¿Deseas vincular una tarjeta ahora?',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Vincular', onPress: () => router.push('/vincular' as any) }
+        ]
+      );
+      return;
+    }
 
     setEstado('procesando');
     setEstadoTracker(1);
@@ -43,25 +81,7 @@ export default function RecargaScreen() {
         return;
       }
 
-      // Obtener tarjeta del usuario
-      const { data: tarjetas } = await supabase
-        .from('tarjetas')
-        .select('id')
-        .eq('usuario_id', user.id)
-        .eq('activa', true)
-        .limit(1);
-
-      if (!tarjetas || tarjetas.length === 0) {
-        Alert.alert('Error', 'No tienes tarjetas vinculadas');
-        setEstado('formulario');
-        return;
-      }
-
-      const montoReal = parseFloat(formatearMonto());
-
       setEstadoTracker(2);
-
-      // Simular pago
       const resultadoPago = await simularPago(montoReal, metodoPago);
 
       if (!resultadoPago.aprobado) {
@@ -71,9 +91,7 @@ export default function RecargaScreen() {
       }
 
       setEstadoTracker(3);
-
-      // Procesar recarga real en Supabase
-      await procesarRecarga(user.id, tarjetas[0].id, montoReal, metodoPago);
+      await procesarRecarga(user.id, tarjetaSeleccionada.id, montoReal, metodoPago);
 
       if (estadoNFC === 'nfc-activo') {
         setEstado('nfc-espera');
@@ -96,27 +114,27 @@ export default function RecargaScreen() {
           <View style={{ width: 24 }} />
         </View>
         <View style={styles.resultScreen}>
-          <View style={[styles.resultIcon, { borderColor: '#C8D400', backgroundColor: '#C8D40022' }]}>
+          <View style={[styles.resultIcon, { borderColor: colors.accent, backgroundColor: `${colors.accent}22` }]}>
             <Text style={styles.resultIconText}>📶</Text>
           </View>
-          <Text style={[styles.resultTitle, { color: '#C8D400' }]}>¡Pago aprobado!</Text>
+          <Text style={[styles.resultTitle, { color: colors.accent }]}>¡Pago aprobado!</Text>
           <Text style={styles.resultSubtitle}>Acerca tu tarjeta a la parte trasera del teléfono</Text>
           <View style={styles.amountBox}>
             <Text style={styles.amountLabel}>Monto aprobado</Text>
             <Text style={styles.amountValue}>B/. {formatearMonto()}</Text>
           </View>
-          <View style={[styles.statusBox, { borderColor: '#C8D400', backgroundColor: '#C8D40015' }]}>
+          <View style={[styles.statusBox, { borderColor: colors.accent, backgroundColor: `${colors.accent}15` }]}>
             <Text style={styles.statusIcon}>📱</Text>
             <View style={styles.statusText}>
-              <Text style={[styles.statusTitle, { color: '#C8D400' }]}>Mantén la tarjeta quieta</Text>
+              <Text style={[styles.statusTitle, { color: colors.accent }]}>Mantén la tarjeta quieta</Text>
               <Text style={styles.statusDesc}>Coloca tu tarjeta RapiPass en la parte trasera por 2 segundos.</Text>
             </View>
           </View>
           <TouchableOpacity
-            style={[styles.btnPrimary, { backgroundColor: '#C8D400' }]}
+            style={[common.btnPrimary, { backgroundColor: colors.accent }]}
             onPress={() => setEstado('resultado')}
           >
-            <Text style={[styles.btnPrimaryText, { color: '#0A0E1F' }]}>Simular acercamiento →</Text>
+            <Text style={[common.btnPrimaryText, { color: colors.background }]}>Simular acercamiento →</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -146,23 +164,51 @@ export default function RecargaScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.screen}>
 
-          <Text style={styles.sectionLabel}>Monto a recargar</Text>
-          <View style={styles.montoWrap}>
+          {tarjetas.length > 1 && (
+            <>
+              <Text style={common.sectionLabel}>Tarjeta a recargar</Text>
+              <View style={styles.payOptions}>
+                {tarjetas.map((t) => (
+                  <TouchableOpacity
+                    key={t.id}
+                    style={[styles.payOpt, tarjetaSeleccionada?.id === t.id && styles.payOptActive]}
+                    onPress={() => setTarjetaSeleccionada(t)}
+                  >
+                    <View style={[styles.radio, tarjetaSeleccionada?.id === t.id && styles.radioActive]}>
+                      {tarjetaSeleccionada?.id === t.id && <View style={styles.radioInner} />}
+                    </View>
+                    <Text style={styles.payIcon}>💳</Text>
+                    <View>
+                      <Text style={styles.payName}>{t.numero_tarjeta}</Text>
+                      <Text style={styles.payDesc}>Saldo: B/. {t.saldo?.toFixed(2)}</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </>
+          )}
+
+          <Text style={common.sectionLabel}>Monto a recargar</Text>
+          <View style={[styles.montoWrap, montoReal > MONTO_MAXIMO && { borderColor: colors.error }]}>
             <Text style={styles.montoCurrency}>B/.</Text>
             <TextInput
               style={styles.montoInput}
               value={formatearMonto()}
               onChangeText={(texto) => {
-                const soloNumeros = texto.replace(/\D/g, '').slice(0, 6);
+                const soloNumeros = texto.replace(/\D/g, '').slice(0, 5);
                 setMonto(soloNumeros || '0');
               }}
               placeholder="0.00"
-              placeholderTextColor="#8899AA"
+              placeholderTextColor={colors.textMuted}
               keyboardType="decimal-pad"
             />
           </View>
+          {montoReal > MONTO_MAXIMO && (
+            <Text style={common.errorText}>Límite máximo B/.{MONTO_MAXIMO}.00</Text>
+          )}
+          <Text style={styles.limiteText}>Mínimo B/.{MONTO_MINIMO}.00 · Máximo B/.{MONTO_MAXIMO}.00</Text>
 
-          <Text style={styles.sectionLabel}>Método de pago</Text>
+          <Text style={common.sectionLabel}>Método de pago</Text>
           <View style={styles.payOptions}>
             {[
               { id: 'tarjeta', icon: '💳', name: 'Tarjeta', desc: 'Débito o crédito •••• 4242' },
@@ -187,11 +233,11 @@ export default function RecargaScreen() {
           </View>
 
           <TouchableOpacity
-            style={[styles.btnPrimary, parseInt(monto) <= 0 && styles.btnDisabled]}
+            style={[common.btnPrimary, !montoValido && common.btnDisabled]}
             onPress={confirmarRecarga}
-            disabled={parseInt(monto) <= 0}
+            disabled={!montoValido}
           >
-            <Text style={styles.btnPrimaryText}>Confirmar recarga →</Text>
+            <Text style={common.btnPrimaryText}>Confirmar recarga →</Text>
           </TouchableOpacity>
 
           {estado === 'procesando' && (
@@ -242,34 +288,19 @@ function PantallaResultado({ monto, estadoNFC, onVolver }: {
 
   const config = {
     'nfc-activo': {
-      icon: '✦',
-      titulo: '¡Recarga exitosa!',
-      subtitulo: 'Tu saldo está activo en tu tarjeta',
-      badgeTitle: 'Saldo activo en tarjeta',
-      badgeDesc: 'Puedes usar tu tarjeta de transporte inmediatamente.',
-      btnColor: '#C8D400',
-      btnText: '#0A0E1F',
-      borderColor: '#C8D400',
+      icon: '✦', titulo: '¡Recarga exitosa!', subtitulo: 'Tu saldo está activo en tu tarjeta',
+      badgeTitle: 'Saldo activo en tarjeta', badgeDesc: 'Puedes usar tu tarjeta de transporte inmediatamente.',
+      btnColor: colors.accent, btnText: colors.background, borderColor: colors.accent,
     },
     'nfc-desactivado': {
-      icon: '⚙️',
-      titulo: '¡Pago aprobado!',
-      subtitulo: 'Activa el NFC para sincronizar',
-      badgeTitle: 'Activa el NFC en Ajustes',
-      badgeDesc: 'Activa el NFC en tu teléfono y acerca tu tarjeta para sincronizar.',
-      btnColor: '#EF9F27',
-      btnText: '#0A0E1F',
-      borderColor: '#EF9F27',
+      icon: '⚙️', titulo: '¡Pago aprobado!', subtitulo: 'Activa el NFC para sincronizar',
+      badgeTitle: 'Activa el NFC en Ajustes', badgeDesc: 'Activa el NFC en tu teléfono y acerca tu tarjeta.',
+      btnColor: colors.warning, btnText: colors.background, borderColor: colors.warning,
     },
     'sin-nfc': {
-      icon: '🏦',
-      titulo: '¡Pago aprobado!',
-      subtitulo: 'Un paso más para activar tu saldo',
-      badgeTitle: 'Acércate a un kiosco',
-      badgeDesc: 'Presenta tu tarjeta en cualquier kiosco o validador para activar tu saldo.',
-      btnColor: '#0066CC',
-      btnText: '#FFFFFF',
-      borderColor: '#0066CC',
+      icon: '🏦', titulo: '¡Pago aprobado!', subtitulo: 'Un paso más para activar tu saldo',
+      badgeTitle: 'Acércate a un kiosco', badgeDesc: 'Presenta tu tarjeta en cualquier kiosco para activar tu saldo.',
+      btnColor: colors.primary, btnText: colors.text, borderColor: colors.primary,
     },
   }[estadoNFC];
 
@@ -291,7 +322,7 @@ function PantallaResultado({ monto, estadoNFC, onVolver }: {
             <Text style={styles.amountLabel}>Monto recargado</Text>
             <Text style={styles.amountValue}>B/. {monto}</Text>
             <Text style={styles.amountCard}>
-              Tarjeta •••• 4821 · {estadoNFC === 'nfc-activo' ? 'Sincronizado ✦' : 'Pendiente sync'}
+              {estadoNFC === 'nfc-activo' ? 'Sincronizado ✦' : 'Pendiente sync'}
             </Text>
           </View>
           <View style={[styles.statusBox, { borderColor: config.borderColor, backgroundColor: `${config.borderColor}15` }]}>
@@ -302,15 +333,12 @@ function PantallaResultado({ monto, estadoNFC, onVolver }: {
             </View>
           </View>
           <TouchableOpacity
-            style={[styles.btnPrimary, { backgroundColor: config.btnColor }]}
+            style={[common.btnPrimary, { backgroundColor: config.btnColor }]}
             onPress={onVolver}
           >
-            <Text style={[styles.btnPrimaryText, { color: config.btnText }]}>Ir al inicio →</Text>
+            <Text style={[common.btnPrimaryText, { color: config.btnText }]}>Ir al inicio →</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.btnHistorial}
-            onPress={() => router.push('/historial' as any)}
-          >
+          <TouchableOpacity style={styles.btnHistorial} onPress={() => router.push('/historial' as any)}>
             <Text style={styles.btnHistorialText}>Ver historial</Text>
           </TouchableOpacity>
         </View>
@@ -320,64 +348,55 @@ function PantallaResultado({ monto, estadoNFC, onVolver }: {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0A0E1F' },
+  container: { flex: 1, backgroundColor: colors.background },
   navbar: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    padding: 18, paddingTop: 48, borderBottomWidth: 0.5, borderBottomColor: '#141830',
+    padding: 18, paddingTop: 48, borderBottomWidth: 0.5, borderBottomColor: colors.borderLight,
   },
-  navBack: { fontSize: 22, color: '#8899AA' },
-  navTitle: { fontWeight: '900', fontSize: 13, color: '#FFFFFF', letterSpacing: 3 },
+  navBack: { fontSize: 22, color: colors.textMuted },
+  navTitle: { fontWeight: '900', fontSize: 13, color: colors.text, letterSpacing: 3 },
   screen: { padding: 18 },
-  sectionLabel: {
-    fontSize: 10, color: '#C8D400', fontWeight: '600',
-    letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8, marginTop: 4,
-  },
   montoWrap: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#141830', borderWidth: 0.5, borderColor: '#0066CC',
-    borderRadius: 10, padding: 12, marginBottom: 18, gap: 6,
+    backgroundColor: colors.card, borderWidth: 0.5, borderColor: colors.primary,
+    borderRadius: 10, padding: 12, marginBottom: 4, gap: 6,
   },
-  montoCurrency: { fontSize: 18, fontWeight: '700', color: '#C8D400' },
-  montoInput: { flex: 1, fontSize: 24, fontWeight: '700', color: '#FFFFFF' },
+  montoCurrency: { fontSize: 18, fontWeight: '700', color: colors.accent },
+  montoInput: { flex: 1, fontSize: 24, fontWeight: '700', color: colors.text },
+  limiteText: { fontSize: 10, color: colors.textMuted, marginBottom: 14 },
   payOptions: { flexDirection: 'column', gap: 8, marginBottom: 18 },
   payOpt: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: '#141830', borderWidth: 0.5, borderColor: '#1E2A50',
+    backgroundColor: colors.card, borderWidth: 0.5, borderColor: colors.border,
     borderRadius: 10, padding: 12,
   },
-  payOptActive: { borderColor: '#0066CC', backgroundColor: '#001A35' },
+  payOptActive: { borderColor: colors.primary, backgroundColor: colors.overlay },
   radio: {
     width: 14, height: 14, borderRadius: 7,
-    borderWidth: 1.5, borderColor: '#1E2A50',
+    borderWidth: 1.5, borderColor: colors.border,
     alignItems: 'center', justifyContent: 'center',
   },
-  radioActive: { borderColor: '#0066CC' },
-  radioInner: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#0066CC' },
+  radioActive: { borderColor: colors.primary },
+  radioInner: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.primary },
   payIcon: { fontSize: 18 },
-  payName: { fontSize: 13, color: '#FFFFFF', fontWeight: '500' },
-  payDesc: { fontSize: 10, color: '#8899AA', marginTop: 1 },
-  btnPrimary: {
-    backgroundColor: '#0066CC', borderRadius: 10,
-    padding: 14, alignItems: 'center', marginBottom: 10,
-  },
-  btnDisabled: { opacity: 0.4 },
-  btnPrimaryText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
-  tracker: { backgroundColor: '#141830', borderRadius: 12, padding: 14 },
+  payName: { fontSize: 13, color: colors.text, fontWeight: '500' },
+  payDesc: { fontSize: 10, color: colors.textMuted, marginTop: 1 },
+  tracker: { backgroundColor: colors.card, borderRadius: 12, padding: 14, marginTop: 10 },
   trackerTitle: {
-    fontSize: 9, color: '#8899AA', letterSpacing: 1.5,
+    fontSize: 9, color: colors.textMuted, letterSpacing: 1.5,
     textTransform: 'uppercase', marginBottom: 12,
   },
   trackerRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 6 },
   trackerLine: { flexDirection: 'column', alignItems: 'center' },
-  trackerDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#1E2A50', marginTop: 1 },
-  trackerDotDone: { backgroundColor: '#C8D400' },
-  trackerDotActive: { backgroundColor: '#0066CC', shadowColor: '#0066CC', shadowRadius: 4, shadowOpacity: 1 },
-  trackerConnector: { width: 1, height: 14, backgroundColor: '#1E2A50', marginVertical: 2 },
-  trackerText: { fontSize: 11, color: '#8899AA' },
-  trackerTextDone: { color: '#C8D400', fontWeight: '600' },
-  trackerTextActive: { color: '#FFFFFF', fontWeight: '600' },
-  trackerSub: { fontSize: 9, color: '#8899AA', marginTop: 1 },
-  trackerSubActive: { color: '#0066CC' },
+  trackerDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.border, marginTop: 1 },
+  trackerDotDone: { backgroundColor: colors.accent },
+  trackerDotActive: { backgroundColor: colors.primary, shadowColor: colors.primary, shadowRadius: 4, shadowOpacity: 1 },
+  trackerConnector: { width: 1, height: 14, backgroundColor: colors.border, marginVertical: 2 },
+  trackerText: { fontSize: 11, color: colors.textMuted },
+  trackerTextDone: { color: colors.accent, fontWeight: '600' },
+  trackerTextActive: { color: colors.text, fontWeight: '600' },
+  trackerSub: { fontSize: 9, color: colors.textMuted, marginTop: 1 },
+  trackerSubActive: { color: colors.primary },
   resultScreen: { padding: 24, alignItems: 'center' },
   resultIcon: {
     width: 80, height: 80, borderRadius: 40,
@@ -385,14 +404,14 @@ const styles = StyleSheet.create({
   },
   resultIconText: { fontSize: 34 },
   resultTitle: { fontSize: 20, fontWeight: '700', marginBottom: 6, letterSpacing: 1, textAlign: 'center' },
-  resultSubtitle: { fontSize: 13, color: '#8899AA', marginBottom: 24, textAlign: 'center' },
+  resultSubtitle: { fontSize: 13, color: colors.textMuted, marginBottom: 24, textAlign: 'center' },
   amountBox: {
-    backgroundColor: '#141830', borderRadius: 12, padding: 16,
-    marginBottom: 16, width: '100%', borderWidth: 0.5, borderColor: '#1E2A50',
+    backgroundColor: colors.card, borderRadius: 12, padding: 16,
+    marginBottom: 16, width: '100%', borderWidth: 0.5, borderColor: colors.border,
   },
-  amountLabel: { fontSize: 9, color: '#8899AA', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 },
-  amountValue: { fontSize: 28, fontWeight: '900', color: '#FFFFFF' },
-  amountCard: { fontSize: 10, color: '#8899AA', marginTop: 4 },
+  amountLabel: { fontSize: 9, color: colors.textMuted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 },
+  amountValue: { fontSize: 28, fontWeight: '900', color: colors.text },
+  amountCard: { fontSize: 10, color: colors.textMuted, marginTop: 4 },
   statusBox: {
     flexDirection: 'row', gap: 10, alignItems: 'flex-start',
     borderRadius: 10, padding: 12, marginBottom: 20,
@@ -401,11 +420,11 @@ const styles = StyleSheet.create({
   statusIcon: { fontSize: 18, marginTop: 1 },
   statusText: { flex: 1 },
   statusTitle: { fontSize: 12, fontWeight: '700', marginBottom: 3 },
-  statusDesc: { fontSize: 11, color: '#8899AA', lineHeight: 16 },
+  statusDesc: { fontSize: 11, color: colors.textMuted, lineHeight: 16 },
   btnHistorial: {
-    borderWidth: 0.5, borderColor: '#1E2A50',
+    borderWidth: 0.5, borderColor: colors.border,
     borderRadius: 10, padding: 14,
     alignItems: 'center', width: '100%',
   },
-  btnHistorialText: { color: '#8899AA', fontSize: 13 },
+  btnHistorialText: { color: colors.textMuted, fontSize: 13 },
 });

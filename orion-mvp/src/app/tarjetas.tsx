@@ -1,24 +1,31 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { useState, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import { getTarjetas } from '../../lib/tarjetas';
 import BottomNav from '@/components/BottomNav';
+import { colors } from '../theme/colors';
+import { common } from '../theme/components';
 
 export default function TarjetasScreen() {
   const router = useRouter();
   const [tarjetas, setTarjetas] = useState<any[]>([]);
 
-  useEffect(() => {
-    cargarTarjetas();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      cargarTarjetas();
+    }, [])
+  );
 
   const cargarTarjetas = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-
     const data = await getTarjetas(user.id);
     if (data) setTarjetas(data);
+  };
+
+  const colorTarjeta = (numero: string) => {
+    return numero.startsWith('3') ? colors.rapipass : colors.metro;
   };
 
   return (
@@ -42,30 +49,34 @@ export default function TarjetasScreen() {
                 Vincula tu tarjeta RapiPass o MetroBus para recargar desde la app.
               </Text>
               <TouchableOpacity
-                style={styles.btnPrimary}
+                style={[common.btnPrimary, styles.btnFull]}
                 onPress={() => router.push('/vincular' as any)}
               >
-                <Text style={styles.btnPrimaryText}>Vincular tarjeta →</Text>
+                <Text style={common.btnPrimaryText}>Vincular tarjeta →</Text>
               </TouchableOpacity>
             </View>
           ) : (
             <>
               {tarjetas.map((tarjeta: any) => (
-                <View key={tarjeta.id} style={styles.tarjetaCard}>
+                <View
+                  key={tarjeta.id}
+                  style={[styles.tarjetaCard, { backgroundColor: colorTarjeta(tarjeta.numero_tarjeta) }]}
+                >
                   <View style={styles.tarjetaChip} />
-                  <Text style={styles.tarjetaNumero}>
-                    •••• •••• •••• {tarjeta.numero_tarjeta.slice(-4)}
-                  </Text>
+                  <Text style={styles.tarjetaNumero}>{tarjeta.numero_tarjeta}</Text>
                   <Text style={styles.tarjetaTipo}>
+                    {tarjeta.numero_tarjeta.startsWith('3') ? 'RapiPass' : 'Metro + MetroBus'}
+                  </Text>
+                  <Text style={styles.tarjetaSaldo}>
                     Saldo: B/. {tarjeta.saldo.toFixed(2)}
                   </Text>
                 </View>
               ))}
               <TouchableOpacity
-                style={styles.btnSecondary}
+                style={[common.btnSecondary]}
                 onPress={() => router.push('/vincular' as any)}
               >
-                <Text style={styles.btnSecondaryText}>+ Agregar otra tarjeta</Text>
+                <Text style={common.btnSecondaryText}>+ Agregar otra tarjeta</Text>
               </TouchableOpacity>
             </>
           )}
@@ -74,50 +85,43 @@ export default function TarjetasScreen() {
       </ScrollView>
 
       <BottomNav activa="tarjetas" />
-
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0A0E1F' },
+  container: { flex: 1, backgroundColor: colors.background },
   navbar: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    padding: 18, paddingTop: 48, borderBottomWidth: 0.5, borderBottomColor: '#141830',
+    padding: 18, paddingTop: 48, borderBottomWidth: 0.5, borderBottomColor: colors.borderLight,
   },
-  navBack: { fontSize: 22, color: '#8899AA' },
-  navTitle: { fontWeight: '900', fontSize: 13, color: '#FFFFFF', letterSpacing: 3 },
+  navBack: { fontSize: 22, color: colors.textMuted },
+  navTitle: { fontWeight: '900', fontSize: 13, color: colors.text, letterSpacing: 3 },
   screen: { padding: 20 },
-  emptyState: {
-    alignItems: 'center', paddingVertical: 60,
-  },
+  emptyState: { alignItems: 'center', paddingVertical: 60 },
   emptyIcon: { fontSize: 48, marginBottom: 16 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: '#FFFFFF', marginBottom: 8 },
+  emptyTitle: { fontSize: 18, fontWeight: '700', color: colors.text, marginBottom: 8 },
   emptyDesc: {
-    fontSize: 13, color: '#8899AA', textAlign: 'center',
+    fontSize: 13, color: colors.textMuted, textAlign: 'center',
     lineHeight: 20, marginBottom: 32, paddingHorizontal: 20,
   },
+  btnFull: { width: '100%' },
   tarjetaCard: {
-    backgroundColor: '#003087', borderRadius: 14, padding: 20,
+    borderRadius: 14, padding: 20,
     marginBottom: 14, position: 'relative', overflow: 'hidden',
   },
   tarjetaChip: {
-    width: 28, height: 20, backgroundColor: '#C8D400',
+    width: 28, height: 20, backgroundColor: colors.accent,
     borderRadius: 4, marginBottom: 16, opacity: 0.8,
   },
   tarjetaNumero: {
-    fontFamily: 'monospace', fontSize: 16, fontWeight: '700',
-    color: '#FFFFFF', letterSpacing: 2, marginBottom: 8,
+    fontFamily: 'monospace', fontSize: 18, fontWeight: '700',
+    color: colors.text, letterSpacing: 3, marginBottom: 6,
   },
-  tarjetaTipo: { fontSize: 11, color: 'rgba(255,255,255,0.6)' },
-  btnPrimary: {
-    backgroundColor: '#0066CC', borderRadius: 10,
-    padding: 14, alignItems: 'center', width: '100%',
+  tarjetaTipo: {
+    fontSize: 11, color: colors.textCard, marginBottom: 6,
   },
-  btnPrimaryText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
-  btnSecondary: {
-    borderWidth: 0.5, borderColor: '#0066CC',
-    borderRadius: 10, padding: 14, alignItems: 'center',
+  tarjetaSaldo: {
+    fontSize: 13, fontWeight: '700', color: colors.accent,
   },
-  btnSecondaryText: { color: '#C8D400', fontSize: 13 },
 });

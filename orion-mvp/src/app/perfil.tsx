@@ -1,16 +1,20 @@
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { useState, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import BottomNav from '@/components/BottomNav';
+import { colors } from '../theme/colors';
+import { common } from '../theme/components';
 
 export default function PerfilScreen() {
   const router = useRouter();
-  const [usuario, setUsuario] = useState({ nombre: '', correo: '' });
+  const [usuario, setUsuario] = useState({ nombre: '', email: '' });
 
-  useEffect(() => {
-    cargarPerfil();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      cargarPerfil();
+    }, [])
+  );
 
   const cargarPerfil = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -18,7 +22,7 @@ export default function PerfilScreen() {
 
     const { data } = await supabase
       .from('usuarios')
-      .select('nombre, correo')
+      .select('nombre, email')
       .eq('id', user.id)
       .single();
 
@@ -26,8 +30,21 @@ export default function PerfilScreen() {
   };
 
   const cerrarSesion = async () => {
-    await supabase.auth.signOut();
-    router.push('/');
+    Alert.alert(
+      'Cerrar sesión',
+      '¿Estás seguro que quieres cerrar sesión?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Cerrar sesión',
+          style: 'destructive',
+          onPress: async () => {
+            await supabase.auth.signOut();
+            router.push('/');
+          }
+        }
+      ]
+    );
   };
 
   return (
@@ -46,50 +63,52 @@ export default function PerfilScreen() {
           <View style={styles.avatarArea}>
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>
-                {usuario.nombre ? usuario.nombre.charAt(0) : '?'}
+                {usuario.nombre ? usuario.nombre.charAt(0).toUpperCase() : '?'}
               </Text>
             </View>
-            <Text style={styles.nombre}>{usuario.nombre}</Text>
-            <Text style={styles.correo}>{usuario.correo}</Text>
+            <Text style={styles.nombre}>{usuario.nombre || 'Usuario'}</Text>
+            <Text style={styles.email}>{usuario.email}</Text>
           </View>
 
-          <Text style={styles.sectionLabel}>Mi cuenta</Text>
+          <Text style={common.sectionLabel}>Mi cuenta</Text>
 
           {[
-            { icon: '💳', label: 'Mis tarjetas', ruta: '/vincular' },
+            { icon: '💳', label: 'Mis tarjetas', ruta: '/tarjetas' },
             { icon: '📋', label: 'Historial de recargas', ruta: '/historial' },
             { icon: '🔔', label: 'Notificaciones', ruta: null },
             { icon: '🔒', label: 'Seguridad', ruta: null },
           ].map((item, index) => (
             <TouchableOpacity
               key={index}
-              style={styles.menuRow}
+              style={[styles.menuRow, !item.ruta && styles.menuRowDisabled]}
               onPress={() => item.ruta && router.push(item.ruta as any)}
             >
               <View style={styles.menuLeft}>
                 <View style={styles.menuIcon}>
                   <Text style={styles.menuIconText}>{item.icon}</Text>
                 </View>
-                <Text style={styles.menuLabel}>{item.label}</Text>
+                <Text style={[styles.menuLabel, !item.ruta && styles.menuLabelDisabled]}>
+                  {item.label}
+                </Text>
               </View>
-              <Text style={styles.menuArrow}>→</Text>
+              <Text style={styles.menuArrow}>{item.ruta ? '→' : ''}</Text>
             </TouchableOpacity>
           ))}
 
-          <Text style={styles.sectionLabel}>Soporte</Text>
+          <Text style={common.sectionLabel}>Soporte</Text>
 
           {[
-            { icon: '❓', label: 'Preguntas frecuentes', ruta: null },
-            { icon: '📞', label: 'Contactar soporte', ruta: null },
+            { icon: '❓', label: 'Preguntas frecuentes' },
+            { icon: '📞', label: 'Contactar soporte' },
           ].map((item, index) => (
-            <TouchableOpacity key={index} style={styles.menuRow}>
+            <TouchableOpacity key={index} style={[styles.menuRow, styles.menuRowDisabled]}>
               <View style={styles.menuLeft}>
                 <View style={styles.menuIcon}>
                   <Text style={styles.menuIconText}>{item.icon}</Text>
                 </View>
-                <Text style={styles.menuLabel}>{item.label}</Text>
+                <Text style={[styles.menuLabel, styles.menuLabelDisabled]}>{item.label}</Text>
               </View>
-              <Text style={styles.menuArrow}>→</Text>
+              <Text style={styles.menuArrow}></Text>
             </TouchableOpacity>
           ))}
 
@@ -100,48 +119,45 @@ export default function PerfilScreen() {
         </View>
       </ScrollView>
       <BottomNav activa="perfil" />
-
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0A0E1F' },
+  container: { flex: 1, backgroundColor: colors.background },
   navbar: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    padding: 18, paddingTop: 48, borderBottomWidth: 0.5, borderBottomColor: '#141830',
+    padding: 18, paddingTop: 48, borderBottomWidth: 0.5, borderBottomColor: colors.borderLight,
   },
-  navBack: { fontSize: 22, color: '#8899AA' },
-  navTitle: { fontWeight: '900', fontSize: 13, color: '#FFFFFF', letterSpacing: 3 },
+  navBack: { fontSize: 22, color: colors.textMuted },
+  navTitle: { fontWeight: '900', fontSize: 13, color: colors.text, letterSpacing: 3 },
   screen: { padding: 18 },
   avatarArea: { alignItems: 'center', paddingVertical: 24 },
   avatar: {
     width: 72, height: 72, borderRadius: 36,
-    backgroundColor: '#003087', borderWidth: 2, borderColor: '#0066CC',
+    backgroundColor: colors.primaryCard, borderWidth: 2, borderColor: colors.primary,
     alignItems: 'center', justifyContent: 'center', marginBottom: 12,
   },
-  avatarText: { fontSize: 28, fontWeight: '900', color: '#C8D400' },
-  nombre: { fontSize: 18, fontWeight: '700', color: '#FFFFFF', marginBottom: 4 },
-  correo: { fontSize: 12, color: '#8899AA' },
-  sectionLabel: {
-    fontSize: 10, color: '#C8D400', fontWeight: '600',
-    letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8, marginTop: 8,
-  },
+  avatarText: { fontSize: 28, fontWeight: '900', color: colors.accent },
+  nombre: { fontSize: 18, fontWeight: '700', color: colors.text, marginBottom: 4 },
+  email: { fontSize: 12, color: colors.textMuted },
   menuRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: 12, borderBottomWidth: 0.5, borderBottomColor: '#141830',
+    paddingVertical: 12, borderBottomWidth: 0.5, borderBottomColor: colors.borderLight,
   },
+  menuRowDisabled: { opacity: 0.5 },
   menuLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   menuIcon: {
     width: 36, height: 36, borderRadius: 10,
-    backgroundColor: '#141830', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.card, alignItems: 'center', justifyContent: 'center',
   },
   menuIconText: { fontSize: 16 },
-  menuLabel: { fontSize: 13, color: '#FFFFFF' },
+  menuLabel: { fontSize: 13, color: colors.text },
+  menuLabelDisabled: { color: colors.textMuted },
   menuArrow: { fontSize: 16, color: '#3A4466' },
   btnCerrar: {
-    borderWidth: 0.5, borderColor: '#FF4444', borderRadius: 10,
+    borderWidth: 0.5, borderColor: colors.error, borderRadius: 10,
     padding: 14, alignItems: 'center', marginTop: 24,
   },
-  btnCerrarText: { color: '#FF4444', fontSize: 13, fontWeight: '600' },
+  btnCerrarText: { color: colors.error, fontSize: 13, fontWeight: '600' },
 });
