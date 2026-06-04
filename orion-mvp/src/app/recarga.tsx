@@ -99,8 +99,8 @@ export default function RecargaScreen() {
         setEstado('resultado');
       }
 
-    } catch (error) {
-      Alert.alert('Error', 'Hubo un problema al procesar la recarga');
+    } catch (error: any) {
+      Alert.alert('Error', error?.message || JSON.stringify(error));
       setEstado('formulario');
     }
   };

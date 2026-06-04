@@ -16,6 +16,6 @@ export const simularPago = async (monto: number, metodo: string) => {
   return {
     aprobado: true,
     mensaje: 'Pago aprobado',
-    transaccionId: crypto.randomUUID()
+    transaccionId: Math.random().toString(36).substring(2) + Date.now().toString(36)
   };
 };

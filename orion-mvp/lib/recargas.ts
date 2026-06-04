@@ -7,7 +7,6 @@ export const procesarRecarga = async (
   metodoPago: string
 ) => {
 
-  // 1. Insertar con estado PENDIENTE
   const { data: recarga, error: errorInsert } = await supabase
     .from('recargas')
     .insert({
@@ -18,38 +17,35 @@ export const procesarRecarga = async (
       estado: 'PENDIENTE'
     })
     .select()
-    .single();
+    .maybeSingle();
 
   if (errorInsert) throw errorInsert;
+  if (!recarga) throw new Error('No se pudo crear la recarga');
 
-  // 2. Simular aprobación del banco (2 segundos)
   await new Promise(resolve => setTimeout(resolve, 2000));
 
-  // 3. Actualizar a APROBADA
   await supabase
     .from('recargas')
     .update({ estado: 'APROBADA' })
     .eq('id', recarga.id);
 
-  // 4. Sumar saldo a la tarjeta
-  const { data: tarjeta } = await supabase
+  const { data: tarjetaData } = await supabase
     .from('tarjetas')
     .select('saldo')
     .eq('id', tarjetaId)
-    .single();
+    .maybeSingle();
 
   await supabase
     .from('tarjetas')
-    .update({ saldo: (tarjeta?.saldo ?? 0) + monto })
+    .update({ saldo: (tarjetaData?.saldo ?? 0) + monto })
     .eq('id', tarjetaId);
 
-  // 5. Actualizar a SINCRONIZADA
   const { data: final, error: errorFinal } = await supabase
     .from('recargas')
     .update({ estado: 'SINCRONIZADA' })
     .eq('id', recarga.id)
     .select()
-    .single();
+    .maybeSingle();
 
   if (errorFinal) throw errorFinal;
   return final;
