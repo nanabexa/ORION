@@ -21,12 +21,10 @@ export default function LoginScreen() {
   };
 
   const validarPassword = (texto: string) => {
-    if (!texto) return 'La contraseña es requerida';
-    if (texto.length < 8) return 'Mínimo 8 caracteres';
-    if (!/[A-Z]/.test(texto)) return 'Debe incluir al menos una mayúscula';
-    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(texto)) return 'Debe incluir al menos un carácter especial';
-    return '';
-  };
+  if (!texto) return 'La contraseña es requerida';
+  if (texto.length < 6) return 'Contraseña muy corta';
+  return '';
+};
 
   const handleLogin = async () => {
     const errCorreo = validarCorreo(correo);
