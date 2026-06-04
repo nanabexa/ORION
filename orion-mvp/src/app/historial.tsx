@@ -28,7 +28,7 @@ export default function HistorialScreen() {
 
     if (!error && data) {
       setRecargas(data);
-      setTotal(data.reduce((acc, r) => acc + r.monto, 0));
+      setTotal(data.filter(r => r.estado === 'SINCRONIZADA').reduce((acc, r) => acc + r.monto, 0));
     }
   };
 
@@ -53,7 +53,7 @@ export default function HistorialScreen() {
 
           <View style={styles.resumenCard}>
             <View style={styles.resumenItem}>
-              <Text style={styles.resumenValor}>{recargas.length}</Text>
+              <Text style={styles.resumenValor}>{recargas.filter(r => r.estado === 'SINCRONIZADA').length}</Text>
               <Text style={styles.resumenLabel}>Recargas</Text>
             </View>
             <View style={styles.resumenDivider} />
