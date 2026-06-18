@@ -45,18 +45,14 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}   # Generate a token on Sonarcloud.io, add it to the secrets of this repo with the name SONAR_TOKEN (Settings > Secrets > Actions > add new repository secret)
         with:
           # Additional arguments for the SonarScanner CLI
-          args:
-            # Unique keys of your project and organization. You can find them in SonarCloud > Information (bottom-left menu)
-            # mandatory
+          # Unique keys of your project and organization. You can find them in SonarCloud > Information (bottom-left menu)
+          # mandatory: sonar.projectKey and sonar.organization
+          # sonar.sources: comma-separated paths to directories containing main source files
+          # sonar.exclusions: excludes node_modules and test files from analysis
+          args: >
             -Dsonar.projectKey=nanabexa_ORION
             -Dsonar.organization=nanabexa
-            # Comma-separated paths to directories containing main source files.
             -Dsonar.sources=orion-mvp/src
-            # Comma-separated paths to directories containing test source files.
-            #-Dsonar.tests= # optional. For more info about Code Coverage, please refer to https://docs.sonarcloud.io/enriching/test-coverage/overview/
-            # Exclude generated files, dependencies, and tests from the analysis
             -Dsonar.exclusions=**/node_modules/**,**/*.test.ts,**/*.test.tsx
-            # Adds more detail to both client and server-side analysis logs, activating DEBUG mode for the scanner, and adding client-side environment variables and system properties to the server-side log of analysis report processing.
-            #-Dsonar.verbose= # optional, default is false
           # When you need the analysis to take place in a directory other than the one from which it was launched, default is .
           projectBaseDir: .
