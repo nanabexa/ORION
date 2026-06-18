@@ -1,4 +1,4 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
@@ -21,10 +21,10 @@ export default function LoginScreen() {
   };
 
   const validarPassword = (texto: string) => {
-  if (!texto) return 'La contraseña es requerida';
-  if (texto.length < 6) return 'Contraseña muy corta';
-  return '';
-};
+    if (!texto) return 'La contraseña es requerida';
+    if (texto.length < 6) return 'Contraseña muy corta';
+    return '';
+  };
 
   const handleLogin = async () => {
     const errCorreo = validarCorreo(correo);
@@ -41,89 +41,110 @@ export default function LoginScreen() {
     setCargando(false);
 
     if (error) {
-      Alert.alert('Error', 'Correo o contraseña incorrectos');
+      if (error.message.includes('Invalid login credentials')) {
+        Alert.alert('Usuario no encontrado', 'Este correo no está registrado o la contraseña es incorrecta.');
+      } else if (error.message.includes('Email not confirmed')) {
+        Alert.alert('Correo no confirmado', 'Debes confirmar tu correo antes de iniciar sesión. Revisa tu bandeja de entrada.');
+      } else {
+        Alert.alert('Error', error.message);
+      }
     } else {
       router.push('/saldo' as any);
     }
   };
 
   return (
-    <View style={styles.container}>
-
-      <View style={styles.hero}>
-        <View style={styles.stars}>
-          <View style={[styles.star, { top: 30, left: 40 }]} />
-          <View style={[styles.star, { top: 15, left: 90 }]} />
-          <View style={[styles.star, { top: 25, left: 160 }]} />
-          <View style={[styles.star, { top: 40, right: 40 }]} />
-          <View style={[styles.star, { top: 10, right: 60 }]} />
-        </View>
-        <View style={styles.shootingStar} />
-      </View>
-
-      <View style={styles.logoArea}>
-        <Text style={styles.logo}>
-          ORI<Text style={styles.logoAccent}>ON</Text>
-        </Text>
-        <Text style={styles.logoSub}>recarga digital</Text>
-      </View>
-
-      <TouchableOpacity style={common.btnGoogle}>
-        <Text style={styles.btnGoogleIcon}>🔵</Text>
-        <Text style={styles.btnGoogleText}>Continuar con Google</Text>
-      </TouchableOpacity>
-
-      <View style={common.divider}>
-        <View style={common.dividerLine} />
-        <Text style={common.dividerText}>o</Text>
-        <View style={common.dividerLine} />
-      </View>
-
-      <Text style={common.label}>Correo</Text>
-      <TextInput
-        style={[common.input, errorCorreo ? common.inputError : null]}
-        value={correo}
-        onChangeText={(texto) => { setCorreo(texto); setErrorCorreo(''); }}
-        placeholder="usuario@email.com"
-        placeholderTextColor={colors.textMuted}
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
-      {errorCorreo ? <Text style={common.errorText}>{errorCorreo}</Text> : null}
-
-      <Text style={common.label}>Contraseña</Text>
-      <View style={[common.inputWrap, errorPassword ? common.inputError : null]}>
-        <TextInput
-          style={common.inputFlex}
-          value={password}
-          onChangeText={(texto) => { setPassword(texto); setErrorPassword(''); }}
-          placeholder="••••••••"
-          placeholderTextColor={colors.textMuted}
-          secureTextEntry={!verPassword}
-        />
-        <TouchableOpacity onPress={() => setVerPassword(!verPassword)}>
-          <Text style={common.eyeIcon}>{verPassword ? '🙈' : '👁'}</Text>
-        </TouchableOpacity>
-      </View>
-      {errorPassword ? <Text style={common.errorText}>{errorPassword}</Text> : null}
-
-      <TouchableOpacity
-        style={[common.btnPrimary, styles.btnMargin, cargando && common.btnDisabled]}
-        onPress={handleLogin}
-        disabled={cargando}
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
       >
-        <Text style={common.btnPrimaryText}>
-          {cargando ? 'Cargando...' : 'Iniciar sesión →'}
-        </Text>
-      </TouchableOpacity>
+        <View style={styles.container}>
 
-      <TouchableOpacity onPress={() => router.push('/registro' as any)}>
-        <Text style={common.link}>
-          ¿No tienes cuenta? <Text style={common.linkAccent}>Regístrate</Text>
-        </Text>
-      </TouchableOpacity>
+          <View style={styles.hero}>
+            <View style={styles.stars}>
+              <View style={[styles.star, { top: 14, left: 40 }]} />
+              <View style={[styles.star, { top: 8, left: 90 }]} />
+              <View style={[styles.star, { top: 12, left: 160 }]} />
+              <View style={[styles.star, { top: 18, right: 40 }]} />
+              <View style={[styles.star, { top: 6, right: 60 }]} />
+            </View>
+            <View style={styles.shootingStar} />
+          </View>
 
-    </View>
+          <View style={styles.logoArea}>
+            <Text style={styles.logo}>
+              ORI<Text style={styles.logoAccent}>ON</Text>
+            </Text>
+            <Text style={styles.logoSub}>recarga digital</Text>
+          </View>
+
+          <TouchableOpacity style={common.btnGoogle}>
+            <Text style={styles.btnGoogleIcon}>🔵</Text>
+            <Text style={styles.btnGoogleText}>Continuar con Google</Text>
+          </TouchableOpacity>
+
+          <View style={common.divider}>
+            <View style={common.dividerLine} />
+            <Text style={common.dividerText}>o</Text>
+            <View style={common.dividerLine} />
+          </View>
+
+          <Text style={common.label}>Correo</Text>
+          <TextInput
+            style={[common.input, errorCorreo ? common.inputError : null]}
+            value={correo}
+            onChangeText={(texto) => { setCorreo(texto); setErrorCorreo(''); }}
+            placeholder="usuario@email.com"
+            placeholderTextColor={colors.textMuted}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+          {errorCorreo ? <Text style={common.errorText}>{errorCorreo}</Text> : null}
+
+          <Text style={common.label}>Contraseña</Text>
+          <View style={[common.inputWrap, errorPassword ? common.inputError : null]}>
+            <TextInput
+              style={common.inputFlex}
+              value={password}
+              onChangeText={(texto) => { setPassword(texto); setErrorPassword(''); }}
+              placeholder="••••••••"
+              placeholderTextColor={colors.textMuted}
+              secureTextEntry={!verPassword}
+            />
+            <TouchableOpacity onPress={() => setVerPassword(!verPassword)}>
+              <Text style={common.eyeIcon}>{verPassword ? '🙈' : '👁'}</Text>
+            </TouchableOpacity>
+          </View>
+          {errorPassword ? <Text style={common.errorText}>{errorPassword}</Text> : null}
+
+          <TouchableOpacity onPress={() => router.push('/recuperar' as any)}>
+            <Text style={styles.olvidoLink}>¿Olvidaste tu contraseña?</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[common.btnPrimary, styles.btnMargin, cargando && common.btnDisabled]}
+            onPress={handleLogin}
+            disabled={cargando}
+          >
+            <Text style={common.btnPrimaryText}>
+              {cargando ? 'Cargando...' : 'Iniciar sesión →'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={() => router.push('/registro' as any)}>
+            <Text style={common.link}>
+              ¿No tienes cuenta? <Text style={common.linkAccent}>Regístrate</Text>
+            </Text>
+          </TouchableOpacity>
+
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -134,7 +155,7 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   hero: {
-    height: 140,
+    height: 70,
     marginHorizontal: -24,
     backgroundColor: colors.background,
     overflow: 'hidden',
@@ -146,12 +167,12 @@ const styles = StyleSheet.create({
     borderRadius: 2, backgroundColor: colors.accent, opacity: 0.6,
   },
   shootingStar: {
-    position: 'absolute', top: 60, left: 40,
-    width: 120, height: 1.5, backgroundColor: colors.accent,
+    position: 'absolute', top: 30, left: 40,
+    width: 100, height: 1.5, backgroundColor: colors.accent,
     opacity: 0.8, transform: [{ rotate: '-25deg' }],
   },
-  logoArea: { alignItems: 'center', marginBottom: 24, marginTop: 8 },
-  logo: { fontSize: 36, fontWeight: '900', color: colors.text, letterSpacing: 4 },
+  logoArea: { alignItems: 'center', marginBottom: 16, marginTop: 4 },
+  logo: { fontSize: 32, fontWeight: '900', color: colors.text, letterSpacing: 4 },
   logoAccent: { color: colors.accent },
   logoSub: {
     fontSize: 10, color: 'rgba(255,255,255,0.35)',
@@ -160,4 +181,11 @@ const styles = StyleSheet.create({
   btnGoogleIcon: { fontSize: 18 },
   btnGoogleText: { fontSize: 14, color: colors.text, fontWeight: '500' },
   btnMargin: { marginTop: 20, marginBottom: 14 },
+  olvidoLink: {
+    color: colors.accent,
+    textAlign: 'right',
+    marginTop: 8,
+    marginBottom: 10,
+    fontSize: 12,
+  },
 });

@@ -40,7 +40,7 @@ export default function PerfilScreen() {
           style: 'destructive',
           onPress: async () => {
             await supabase.auth.signOut();
-            router.push('/');
+            router.replace('/');
           }
         }
       ]

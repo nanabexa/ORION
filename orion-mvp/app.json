@@ -18,7 +18,12 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.orionmvp"
+      "package": "com.orionmvp",
+      "softwareKeyboardLayoutMode": "pan",
+      "navigationBar": {
+        "barStyle": "light-content",
+        "backgroundColor": "#0A0E1F"
+      }
     },
     "web": {
       "output": "static",
@@ -35,7 +40,8 @@
             "imageWidth": 76
           }
         }
-      ]
+      ],
+      "react-native-nfc-manager"
     ],
     "experiments": {
       "typedRoutes": true,

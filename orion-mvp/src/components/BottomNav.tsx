@@ -1,5 +1,7 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors } from '../theme/colors';
 
 type Props = {
   activa: 'inicio' | 'tarjetas' | 'historial' | 'recargar' | 'perfil';
@@ -7,6 +9,7 @@ type Props = {
 
 export default function BottomNav({ activa }: Props) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const items = [
     { id: 'tarjetas', icon: '🎫', label: 'Tarjetas', ruta: '/tarjetas' },
@@ -17,7 +20,7 @@ export default function BottomNav({ activa }: Props) {
   ];
 
   return (
-    <View style={styles.bottomNav}>
+    <View style={[styles.bottomNav, { paddingBottom: Math.max(insets.bottom, 12) }]}>
       {items.map((item) => (
         <TouchableOpacity
           key={item.id}
@@ -41,12 +44,12 @@ export default function BottomNav({ activa }: Props) {
 const styles = StyleSheet.create({
   bottomNav: {
     flexDirection: 'row', justifyContent: 'space-around',
-    paddingVertical: 12, borderTopWidth: 0.5, borderTopColor: '#141830',
-    backgroundColor: '#0A0E1F',
+    paddingTop: 12, borderTopWidth: 0.5, borderTopColor: colors.borderLight,
+    backgroundColor: colors.background,
   },
   navItem: { alignItems: 'center', gap: 2 },
   navItemIcon: { fontSize: 18 },
-  navItemText: { fontSize: 9, color: '#8899AA' },
-  navItemActive: { color: '#0066CC' },
-  navDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#0066CC', marginTop: 1 },
+  navItemText: { fontSize: 9, color: colors.textMuted },
+  navItemActive: { color: colors.primary },
+  navDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: colors.primary, marginTop: 1 },
 });

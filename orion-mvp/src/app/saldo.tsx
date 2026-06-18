@@ -27,9 +27,20 @@ export default function SaldoScreen() {
       .eq('usuario_id', user.id).eq('activa', true);
 
     if (listaTarjetas && listaTarjetas.length > 0) {
-      setTarjetas(listaTarjetas);
-      setTarjetaSeleccionada(listaTarjetas[0]);
-      await cargarRecargas(user.id, listaTarjetas[0].id);
+      const tarjetasConSaldo = await Promise.all(
+        listaTarjetas.map(async (t) => {
+          const { data: tarjetaValida } = await supabase
+            .from('tarjetas_validas')
+            .select('saldo')
+            .eq('numero', t.numero_tarjeta)
+            .maybeSingle();
+          return { ...t, saldo: tarjetaValida?.saldo ?? 0 };
+        })
+      );
+
+      setTarjetas(tarjetasConSaldo);
+      setTarjetaSeleccionada(tarjetasConSaldo[0]);
+      await cargarRecargas(user.id, tarjetasConSaldo[0].id);
     }
   };
 
@@ -99,7 +110,11 @@ export default function SaldoScreen() {
           </TouchableOpacity>
         )}
 
-        <TouchableOpacity style={styles.btnPrimary} onPress={() => router.push('/recarga')}>
+        <TouchableOpacity
+          style={[styles.btnPrimary, !tarjetaSeleccionada && styles.btnDisabled]}
+          onPress={() => router.push('/recarga')}
+          disabled={!tarjetaSeleccionada}
+        >
           <Text style={styles.btnPrimaryText}>+ Recargar tarjeta →</Text>
         </TouchableOpacity>
 
@@ -178,6 +193,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary, borderRadius: 10, padding: 14,
     alignItems: 'center', marginHorizontal: 18, marginBottom: 18,
   },
+  btnDisabled: { opacity: 0.4 },
   btnPrimaryText: { color: colors.text, fontSize: 13, fontWeight: '700' },
   sectionTitle: {
     fontSize: 10, color: colors.textMuted, letterSpacing: 1.5,

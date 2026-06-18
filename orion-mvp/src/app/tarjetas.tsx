@@ -21,7 +21,20 @@ export default function TarjetasScreen() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     const data = await getTarjetas(user.id);
-    if (data) setTarjetas(data);
+    if (!data) return;
+
+    const tarjetasConSaldo = await Promise.all(
+      data.map(async (t: any) => {
+        const { data: tarjetaValida } = await supabase
+          .from('tarjetas_validas')
+          .select('saldo')
+          .eq('numero', t.numero_tarjeta)
+          .maybeSingle();
+        return { ...t, saldo: tarjetaValida?.saldo ?? 0 };
+      })
+    );
+
+    setTarjetas(tarjetasConSaldo);
   };
 
   const colorTarjeta = (numero: string) => {
@@ -108,7 +121,7 @@ const styles = StyleSheet.create({
   btnFull: { width: '100%' },
   tarjetaCard: {
     borderRadius: 14, padding: 20,
-    marginBottom: 14, position: 'relative', overflow: 'hidden',
+    marginBottom: 14, position: 'relative', overflow: 'hidden', minHeight: 130,
   },
   tarjetaChip: {
     width: 28, height: 20, backgroundColor: colors.accent,
@@ -119,7 +132,7 @@ const styles = StyleSheet.create({
     color: colors.text, letterSpacing: 3, marginBottom: 6,
   },
   tarjetaTipo: {
-    fontSize: 11, color: colors.textCard, marginBottom: 6,
+    fontSize: 11, color: colors.textCard, marginBottom: 10, flexWrap: 'wrap',
   },
   tarjetaSaldo: {
     fontSize: 13, fontWeight: '700', color: colors.accent,

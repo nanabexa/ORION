@@ -64,7 +64,7 @@ export const common = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   label: {
-    fontSize: 10,
+    fontSize: 11,
     color: colors.accent,
     fontWeight: '600',
     letterSpacing: 0.8,

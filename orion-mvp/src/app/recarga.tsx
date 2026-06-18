@@ -1,4 +1,4 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Platform, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Platform, Alert, KeyboardAvoidingView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
@@ -6,13 +6,7 @@ import { procesarRecarga } from '../../lib/recargas';
 import { simularPago } from '../../lib/pagos';
 import { colors } from '../theme/colors';
 import { common } from '../theme/components';
-
-const detectarNFC = () => {
-  if (Platform.OS === 'web') return 'sin-nfc';
-  if (Platform.OS === 'ios') return 'sin-nfc';
-  if (Platform.OS === 'android') return 'nfc-activo';
-  return 'sin-nfc';
-};
+import NfcManager from 'react-native-nfc-manager';
 
 type Estado = 'formulario' | 'procesando' | 'resultado' | 'nfc-espera' | 'exitoso';
 type MetodoPago = 'tarjeta' | 'yappy' | 'transferencia';
@@ -20,6 +14,7 @@ type EstadoNFC = 'nfc-activo' | 'nfc-desactivado' | 'sin-nfc';
 
 const MONTO_MAXIMO = 50;
 const MONTO_MINIMO = 1;
+const COOLDOWN_SEGUNDOS = 15 * 60;
 
 export default function RecargaScreen() {
   const router = useRouter();
@@ -29,11 +24,39 @@ export default function RecargaScreen() {
   const [estadoTracker, setEstadoTracker] = useState(0);
   const [tarjetas, setTarjetas] = useState<any[]>([]);
   const [tarjetaSeleccionada, setTarjetaSeleccionada] = useState<any>(null);
-  const estadoNFC: EstadoNFC = detectarNFC();
+  const [cooldown, setCooldown] = useState(0);
+  const [estadoNFC, setEstadoNFC] = useState<EstadoNFC>('sin-nfc');
 
   useEffect(() => {
     cargarTarjetas();
+    verificarNFC();
   }, []);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const interval = setInterval(() => {
+      setCooldown((prev) => (prev <= 1 ? 0 : prev - 1));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [cooldown]);
+
+  const verificarNFC = async () => {
+    if (Platform.OS === 'web' || Platform.OS === 'ios') {
+      setEstadoNFC('sin-nfc');
+      return;
+    }
+    try {
+      const soportado = await NfcManager.isSupported();
+      if (!soportado) {
+        setEstadoNFC('sin-nfc');
+        return;
+      }
+      const activado = await NfcManager.isEnabled();
+      setEstadoNFC(activado ? 'nfc-activo' : 'nfc-desactivado');
+    } catch (e) {
+      setEstadoNFC('sin-nfc');
+    }
+  };
 
   const cargarTarjetas = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -52,11 +75,18 @@ export default function RecargaScreen() {
     return (num / 100).toFixed(2);
   };
 
+  const formatearCooldown = () => {
+    const min = Math.floor(cooldown / 60);
+    const seg = cooldown % 60;
+    return `${min}:${seg.toString().padStart(2, '0')}`;
+  };
+
   const montoReal = parseFloat(formatearMonto());
   const montoValido = montoReal >= MONTO_MINIMO && montoReal <= MONTO_MAXIMO;
+  const botonDeshabilitado = !montoValido || cooldown > 0 || estado === 'procesando';
 
   const confirmarRecarga = async () => {
-    if (!montoValido) return;
+    if (!montoValido || cooldown > 0) return;
 
     if (!tarjetaSeleccionada) {
       Alert.alert(
@@ -92,6 +122,7 @@ export default function RecargaScreen() {
 
       setEstadoTracker(3);
       await procesarRecarga(user.id, tarjetaSeleccionada.id, montoReal, metodoPago);
+      setCooldown(COOLDOWN_SEGUNDOS);
 
       if (estadoNFC === 'nfc-activo') {
         setEstado('nfc-espera');
@@ -152,130 +183,149 @@ export default function RecargaScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.navbar}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.navBack}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.navTitle}>NUEVA RECARGA</Text>
-        <View style={{ width: 24 }} />
-      </View>
-
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.screen}>
-
-          {tarjetas.length > 1 && (
-            <>
-              <Text style={common.sectionLabel}>Tarjeta a recargar</Text>
-              <View style={styles.payOptions}>
-                {tarjetas.map((t) => (
-                  <TouchableOpacity
-                    key={t.id}
-                    style={[styles.payOpt, tarjetaSeleccionada?.id === t.id && styles.payOptActive]}
-                    onPress={() => setTarjetaSeleccionada(t)}
-                  >
-                    <View style={[styles.radio, tarjetaSeleccionada?.id === t.id && styles.radioActive]}>
-                      {tarjetaSeleccionada?.id === t.id && <View style={styles.radioInner} />}
-                    </View>
-                    <Text style={styles.payIcon}>💳</Text>
-                    <View>
-                      <Text style={styles.payName}>{t.numero_tarjeta}</Text>
-                      <Text style={styles.payDesc}>Saldo: B/. {t.saldo?.toFixed(2)}</Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </>
-          )}
-
-          <Text style={common.sectionLabel}>Monto a recargar</Text>
-          <View style={[styles.montoWrap, montoReal > MONTO_MAXIMO && { borderColor: colors.error }]}>
-            <Text style={styles.montoCurrency}>B/.</Text>
-            <TextInput
-              style={styles.montoInput}
-              value={formatearMonto()}
-              onChangeText={(texto) => {
-                const soloNumeros = texto.replace(/\D/g, '').slice(0, 5);
-                setMonto(soloNumeros || '0');
-              }}
-              placeholder="0.00"
-              placeholderTextColor={colors.textMuted}
-              keyboardType="decimal-pad"
-            />
-          </View>
-          {montoReal > MONTO_MAXIMO && (
-            <Text style={common.errorText}>Límite máximo B/.{MONTO_MAXIMO}.00</Text>
-          )}
-          <Text style={styles.limiteText}>Mínimo B/.{MONTO_MINIMO}.00 · Máximo B/.{MONTO_MAXIMO}.00</Text>
-
-          <Text style={common.sectionLabel}>Método de pago</Text>
-          <View style={styles.payOptions}>
-            {[
-              { id: 'tarjeta', icon: '💳', name: 'Tarjeta', desc: 'Débito o crédito •••• 4242' },
-              { id: 'yappy', icon: '📱', name: 'Yappy', desc: 'Pago instantáneo' },
-              { id: 'transferencia', icon: '🏦', name: 'Transferencia', desc: 'Banco en línea' },
-            ].map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={[styles.payOpt, metodoPago === item.id && styles.payOptActive]}
-                onPress={() => setMetodoPago(item.id as MetodoPago)}
-              >
-                <View style={[styles.radio, metodoPago === item.id && styles.radioActive]}>
-                  {metodoPago === item.id && <View style={styles.radioInner} />}
-                </View>
-                <Text style={styles.payIcon}>{item.icon}</Text>
-                <View>
-                  <Text style={styles.payName}>{item.name}</Text>
-                  <Text style={styles.payDesc}>{item.desc}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <TouchableOpacity
-            style={[common.btnPrimary, !montoValido && common.btnDisabled]}
-            onPress={confirmarRecarga}
-            disabled={!montoValido}
-          >
-            <Text style={common.btnPrimaryText}>Confirmar recarga →</Text>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <View style={styles.container}>
+        <View style={styles.navbar}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Text style={styles.navBack}>←</Text>
           </TouchableOpacity>
+          <Text style={styles.navTitle}>NUEVA RECARGA</Text>
+          <View style={{ width: 24 }} />
+        </View>
 
-          {estado === 'procesando' && (
-            <View style={styles.tracker}>
-              <Text style={styles.trackerTitle}>Estado</Text>
-              {[
-                { label: 'Procesando', sub: 'Solicitud enviada' },
-                { label: 'Aprobando', sub: 'Verificando pago...' },
-                { label: 'Lista', sub: 'Saldo acreditado' },
-              ].map((item, index) => (
-                <View key={index} style={styles.trackerRow}>
-                  <View style={styles.trackerLine}>
-                    <View style={[
-                      styles.trackerDot,
-                      estadoTracker > index && styles.trackerDotDone,
-                      estadoTracker === index + 1 && styles.trackerDotActive,
-                    ]} />
-                    {index < 2 && <View style={styles.trackerConnector} />}
-                  </View>
-                  <View>
-                    <Text style={[
-                      styles.trackerText,
-                      estadoTracker > index && styles.trackerTextDone,
-                      estadoTracker === index + 1 && styles.trackerTextActive,
-                    ]}>{item.label}</Text>
-                    <Text style={[
-                      styles.trackerSub,
-                      estadoTracker === index + 1 && styles.trackerSubActive,
-                    ]}>{item.sub}</Text>
-                  </View>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 80 }}
+        >
+          <View style={styles.screen}>
+
+            {tarjetas.length > 1 && (
+              <>
+                <Text style={common.sectionLabel}>Tarjeta a recargar</Text>
+                <View style={styles.payOptions}>
+                  {tarjetas.map((t) => (
+                    <TouchableOpacity
+                      key={t.id}
+                      style={[styles.payOpt, tarjetaSeleccionada?.id === t.id && styles.payOptActive]}
+                      onPress={() => setTarjetaSeleccionada(t)}
+                    >
+                      <View style={[styles.radio, tarjetaSeleccionada?.id === t.id && styles.radioActive]}>
+                        {tarjetaSeleccionada?.id === t.id && <View style={styles.radioInner} />}
+                      </View>
+                      <Text style={styles.payIcon}>💳</Text>
+                      <View>
+                        <Text style={styles.payName}>{t.numero_tarjeta}</Text>
+                        <Text style={styles.payDesc}>Saldo: B/. {t.saldo?.toFixed(2)}</Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
                 </View>
+              </>
+            )}
+
+            <Text style={common.sectionLabel}>Monto a recargar</Text>
+            <View style={[styles.montoWrap, montoReal > MONTO_MAXIMO && { borderColor: colors.error }]}>
+              <Text style={styles.montoCurrency}>B/.</Text>
+              <TextInput
+                style={styles.montoInput}
+                value={formatearMonto()}
+                onChangeText={(texto) => {
+                  const soloNumeros = texto.replace(/\D/g, '').slice(0, 5);
+                  setMonto(soloNumeros || '0');
+                }}
+                placeholder="0.00"
+                placeholderTextColor={colors.textMuted}
+                keyboardType="decimal-pad"
+              />
+            </View>
+            {montoReal > MONTO_MAXIMO && (
+              <Text style={common.errorText}>Límite máximo B/.{MONTO_MAXIMO}.00</Text>
+            )}
+            <Text style={styles.limiteText}>Mínimo B/.{MONTO_MINIMO}.00 · Máximo B/.{MONTO_MAXIMO}.00</Text>
+
+            <Text style={common.sectionLabel}>Método de pago</Text>
+            <View style={styles.payOptions}>
+              {[
+                { id: 'tarjeta', icon: '💳', name: 'Tarjeta', desc: 'Débito o crédito •••• 4242' },
+                { id: 'yappy', icon: '📱', name: 'Yappy', desc: 'Pago instantáneo' },
+                { id: 'transferencia', icon: '🏦', name: 'Transferencia', desc: 'Banco en línea' },
+              ].map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[styles.payOpt, metodoPago === item.id && styles.payOptActive]}
+                  onPress={() => setMetodoPago(item.id as MetodoPago)}
+                >
+                  <View style={[styles.radio, metodoPago === item.id && styles.radioActive]}>
+                    {metodoPago === item.id && <View style={styles.radioInner} />}
+                  </View>
+                  <Text style={styles.payIcon}>{item.icon}</Text>
+                  <View>
+                    <Text style={styles.payName}>{item.name}</Text>
+                    <Text style={styles.payDesc}>{item.desc}</Text>
+                  </View>
+                </TouchableOpacity>
               ))}
             </View>
-          )}
 
-        </View>
-      </ScrollView>
-    </View>
+            {cooldown > 0 && (
+              <View style={styles.cooldownBox}>
+                <Text style={styles.cooldownText}>
+                  ⏱ Espera {formatearCooldown()} antes de hacer otra recarga
+                </Text>
+              </View>
+            )}
+
+            <TouchableOpacity
+              style={[common.btnPrimary, botonDeshabilitado && common.btnDisabled]}
+              onPress={confirmarRecarga}
+              disabled={botonDeshabilitado}
+            >
+              <Text style={common.btnPrimaryText}>
+                {cooldown > 0 ? `Espera ${formatearCooldown()}` : 'Confirmar recarga →'}
+              </Text>
+            </TouchableOpacity>
+
+            {estado === 'procesando' && (
+              <View style={styles.tracker}>
+                <Text style={styles.trackerTitle}>Estado</Text>
+                {[
+                  { label: 'Procesando', sub: 'Solicitud enviada' },
+                  { label: 'Aprobando', sub: 'Verificando pago...' },
+                  { label: 'Lista', sub: 'Saldo acreditado' },
+                ].map((item, index) => (
+                  <View key={index} style={styles.trackerRow}>
+                    <View style={styles.trackerLine}>
+                      <View style={[
+                        styles.trackerDot,
+                        estadoTracker > index && styles.trackerDotDone,
+                        estadoTracker === index + 1 && styles.trackerDotActive,
+                      ]} />
+                      {index < 2 && <View style={styles.trackerConnector} />}
+                    </View>
+                    <View>
+                      <Text style={[
+                        styles.trackerText,
+                        estadoTracker > index && styles.trackerTextDone,
+                        estadoTracker === index + 1 && styles.trackerTextActive,
+                      ]}>{item.label}</Text>
+                      <Text style={[
+                        styles.trackerSub,
+                        estadoTracker === index + 1 && styles.trackerSubActive,
+                      ]}>{item.sub}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+
+          </View>
+        </ScrollView>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -381,6 +431,11 @@ const styles = StyleSheet.create({
   payIcon: { fontSize: 18 },
   payName: { fontSize: 13, color: colors.text, fontWeight: '500' },
   payDesc: { fontSize: 10, color: colors.textMuted, marginTop: 1 },
+  cooldownBox: {
+    backgroundColor: colors.card, borderRadius: 10, padding: 12,
+    marginBottom: 14, borderWidth: 0.5, borderColor: colors.warning,
+  },
+  cooldownText: { fontSize: 11, color: colors.warning, textAlign: 'center' },
   tracker: { backgroundColor: colors.card, borderRadius: 12, padding: 14, marginTop: 10 },
   trackerTitle: {
     fontSize: 9, color: colors.textMuted, letterSpacing: 1.5,
@@ -390,7 +445,7 @@ const styles = StyleSheet.create({
   trackerLine: { flexDirection: 'column', alignItems: 'center' },
   trackerDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.border, marginTop: 1 },
   trackerDotDone: { backgroundColor: colors.accent },
-  trackerDotActive: { backgroundColor: colors.primary, shadowColor: colors.primary, shadowRadius: 4, shadowOpacity: 1 },
+  trackerDotActive: { backgroundColor: colors.primary, boxShadow: `0 0 4px ${colors.primary}` } as any,
   trackerConnector: { width: 1, height: 14, backgroundColor: colors.border, marginVertical: 2 },
   trackerText: { fontSize: 11, color: colors.textMuted },
   trackerTextDone: { color: colors.accent, fontWeight: '600' },

@@ -1,4 +1,4 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
@@ -15,11 +15,11 @@ export default function VincularScreen() {
   const [cargando, setCargando] = useState(false);
 
   const formatearNumero = (texto: string) => {
-  const max = tipo === 'metro' ? 10 : 8;
-  const limpio = texto.replace(/\D/g, '').slice(0, max);
-  const grupos = limpio.match(/.{1,4}/g);
-  return grupos ? grupos.join(' ') : limpio;
-};
+    const max = tipo === 'metro' ? 10 : 8;
+    const limpio = texto.replace(/\D/g, '').slice(0, max);
+    const grupos = limpio.match(/.{1,4}/g);
+    return grupos ? grupos.join(' ') : limpio;
+  };
 
   const handleCambio = (texto: string) => setNumero(formatearNumero(texto));
 
@@ -47,7 +47,6 @@ export default function VincularScreen() {
 
       const numeroLimpio = numero.replace(/\s/g, '');
 
-      // Validar que el número existe en tarjetas_validas
       const { data: tarjetaValida, error: errorValidacion } = await supabase
         .from('tarjetas_validas')
         .select('numero, tipo')
@@ -61,7 +60,6 @@ export default function VincularScreen() {
         return;
       }
 
-      // Verificar que el tipo coincide
       if (tarjetaValida.tipo !== tipo) {
         Alert.alert('Tipo incorrecto', `Este número corresponde a una tarjeta ${tarjetaValida.tipo === 'metro' ? 'Metro + MetroBus' : 'RapiPass'}.`);
         setCargando(false);
@@ -81,83 +79,89 @@ export default function VincularScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.navbar}>
-        <View style={{ width: 24 }} />
-        <Text style={styles.navTitle}>MIS TARJETAS</Text>
-        <View style={{ width: 24 }} />
-      </View>
-
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.screen}>
-
-          <View style={[styles.cardPreview, { backgroundColor: colorTarjeta }]}>
-            <View style={styles.cardGlow} />
-            <View style={styles.cardChip} />
-            <Text style={styles.cardNumber}>
-              {numero.length > 0 ? numero.padEnd(19, '•').slice(0, 19) : '•••• •••• •••• ••••'}
-            </Text>
-            <Text style={styles.cardLabel}>Tarjeta de transporte</Text>
-            <Text style={styles.cardSub}>{nombreTarjeta}</Text>
-          </View>
-
-          <Text style={common.sectionLabel}>Tipo de tarjeta</Text>
-          <View style={styles.tiposWrap}>
-            {[
-              { id: 'metro', icon: '🚇', nombre: 'Metro + MetroBus', desc: 'Ciudad de Panamá' },
-              { id: 'rapipass', icon: '🎫', nombre: 'RapiPass', desc: 'Terminal + MetroBus + Metro' },
-            ].map((item) => (
-              <TouchableOpacity
-                key={item.id}
-                style={[styles.tipoOpt, tipo === item.id && styles.tipoOptActive]}
-                onPress={() => setTipo(item.id as TipoTarjeta)}
-              >
-                <View style={[styles.tipoRadio, tipo === item.id && styles.tipoRadioActive]}>
-                  {tipo === item.id && <View style={styles.tipoRadioInner} />}
-                </View>
-                <Text style={styles.tipoIcon}>{item.icon}</Text>
-                <View>
-                  <Text style={styles.tipoNombre}>{item.nombre}</Text>
-                  <Text style={styles.tipoDesc}>{item.desc}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <Text style={common.sectionLabel}>Número de tarjeta</Text>
-          <View style={styles.inputWrap}>
-            <Text style={styles.inputIcon}>💳</Text>
-            <TextInput
-              style={styles.input}
-              value={numero}
-              onChangeText={handleCambio}
-              placeholder="0000 0000"
-              placeholderTextColor="#4A5A7A"
-              keyboardType="numeric"
-              maxLength={tipo === 'metro' ? 13 : 9}
-            />
-          </View>
-
-          <View style={styles.hintBox}>
-            <Text style={styles.hintIcon}>ℹ️</Text>
-            <Text style={styles.hintText}>
-              El número de 8 dígitos está en tu tarjeta de transporte.
-            </Text>
-          </View>
-
-          <TouchableOpacity
-            style={[common.btnPrimary, !listo && common.btnDisabled]}
-            onPress={handleVincular}
-            disabled={!listo || cargando}
-          >
-            <Text style={common.btnPrimaryText}>
-              {cargando ? 'Vinculando...' : 'Vincular tarjeta →'}
-            </Text>
-          </TouchableOpacity>
-
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <View style={styles.container}>
+        <View style={styles.navbar}>
+          <View style={{ width: 24 }} />
+          <Text style={styles.navTitle}>MIS TARJETAS</Text>
+          <View style={{ width: 24 }} />
         </View>
-      </ScrollView>
-    </View>
+
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 80 }}
+        >
+          <View style={styles.screen}>
+
+            <View style={[styles.cardPreview, { backgroundColor: colorTarjeta }]}>
+              <View style={styles.cardGlow} />
+              <View style={styles.cardChip} />
+              <Text style={styles.cardNumber}>
+                {numero.length > 0 ? numero.padEnd(19, '•').slice(0, 19) : '•••• •••• •••• ••••'}
+              </Text>
+              <Text style={styles.cardLabel}>Tarjeta de transporte</Text>
+              <Text style={styles.cardSub}>{nombreTarjeta}</Text>
+            </View>
+
+            <Text style={common.sectionLabel}>Tipo de tarjeta</Text>
+            <View style={styles.tiposWrap}>
+              {[
+                { id: 'metro', nombre: 'Metro + MetroBus', desc: 'Ciudad de Panamá' },
+                { id: 'rapipass', nombre: 'RapiPass', desc: 'Terminal + MetroBus + Metro' },
+              ].map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[styles.tipoOpt, tipo === item.id && styles.tipoOptActive]}
+                  onPress={() => setTipo(item.id as TipoTarjeta)}
+                >
+                  <View style={[styles.tipoRadio, tipo === item.id && styles.tipoRadioActive]}>
+                    {tipo === item.id && <View style={styles.tipoRadioInner} />}
+                  </View>
+                  <View style={styles.tipoTextWrap}>
+                    <Text style={styles.tipoNombre}>{item.nombre}</Text>
+                    <Text style={styles.tipoDesc}>{item.desc}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={common.sectionLabel}>Número de tarjeta</Text>
+            <View style={styles.inputWrap}>
+              <TextInput
+                style={styles.input}
+                value={numero}
+                onChangeText={handleCambio}
+                placeholder="0000 0000"
+                placeholderTextColor="#4A5A7A"
+                keyboardType="numeric"
+                maxLength={tipo === 'metro' ? 13 : 9}
+              />
+            </View>
+
+            <View style={styles.hintBox}>
+              <Text style={styles.hintText}>
+                El número de 8 o 10 dígitos está en tu tarjeta de transporte.
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={[common.btnPrimary, !listo && common.btnDisabled]}
+              onPress={handleVincular}
+              disabled={!listo || cargando}
+            >
+              <Text style={common.btnPrimaryText}>
+                {cargando ? 'Vinculando...' : 'Vincular tarjeta →'}
+              </Text>
+            </TouchableOpacity>
+
+          </View>
+        </ScrollView>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -190,33 +194,31 @@ const styles = StyleSheet.create({
   cardSub: { fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 2 },
   tiposWrap: { flexDirection: 'row', gap: 10, marginBottom: 18 },
   tipoOpt: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8,
+    flex: 1, flexDirection: 'row', alignItems: 'flex-start', gap: 8,
     backgroundColor: colors.card, borderWidth: 0.5, borderColor: colors.border,
-    borderRadius: 10, padding: 12,
+    borderRadius: 10, padding: 12, minHeight: 70,
   },
   tipoOptActive: { borderColor: colors.primary, backgroundColor: colors.overlay },
   tipoRadio: {
     width: 14, height: 14, borderRadius: 7,
     borderWidth: 1.5, borderColor: colors.border,
-    alignItems: 'center', justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'center', marginTop: 2,
   },
   tipoRadioActive: { borderColor: colors.primary },
   tipoRadioInner: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.primary },
-  tipoIcon: { fontSize: 16 },
-  tipoNombre: { fontSize: 11, color: colors.text, fontWeight: '600' },
-  tipoDesc: { fontSize: 9, color: colors.textMuted, marginTop: 1 },
+  tipoTextWrap: { flex: 1 },
+  tipoNombre: { fontSize: 11, color: colors.text, fontWeight: '600', flexWrap: 'wrap' },
+  tipoDesc: { fontSize: 9, color: colors.textMuted, marginTop: 2, flexWrap: 'wrap' },
   inputWrap: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     backgroundColor: colors.card, borderWidth: 0.5, borderColor: colors.primary,
     borderRadius: 10, padding: 13, marginBottom: 14,
   },
-  inputIcon: { fontSize: 18 },
   input: { flex: 1, fontSize: 18, color: colors.text, letterSpacing: 2 },
   hintBox: {
     flexDirection: 'row', gap: 8, alignItems: 'flex-start',
     backgroundColor: colors.card, borderWidth: 0.5, borderColor: colors.border,
     borderRadius: 8, padding: 12, marginBottom: 24,
   },
-  hintIcon: { fontSize: 14, marginTop: 1 },
   hintText: { flex: 1, fontSize: 11, color: colors.textMuted, lineHeight: 16 },
 });

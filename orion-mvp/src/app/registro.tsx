@@ -1,4 +1,4 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
@@ -101,121 +101,131 @@ export default function RegistroScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.navbar}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.navBack}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.navTitle}>REGISTRO</Text>
-        <View style={{ width: 24 }} />
-      </View>
-
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.screen}>
-
-          <TouchableOpacity style={common.btnGoogle}>
-            <Text style={styles.btnGoogleIcon}>🔵</Text>
-            <Text style={styles.btnGoogleText}>Registrarse con Google</Text>
-          </TouchableOpacity>
-
-          <View style={common.divider}>
-            <View style={common.dividerLine} />
-            <Text style={common.dividerText}>o</Text>
-            <View style={common.dividerLine} />
-          </View>
-
-          <Text style={common.label}>Nombre completo</Text>
-          <TextInput
-            style={[common.input, errorNombre ? common.inputError : null]}
-            value={nombre}
-            onChangeText={(texto) => { setNombre(texto); setErrorNombre(validarNombre(texto)); }}
-            placeholder="Viviana Nieto"
-            placeholderTextColor={colors.textMuted}
-            maxLength={50}
-          />
-          {errorNombre ? <Text style={common.errorText}>{errorNombre}</Text> : null}
-
-          <Text style={common.label}>Correo</Text>
-          <TextInput
-            style={[common.input, errorCorreo ? common.inputError : null]}
-            value={correo}
-            onChangeText={(texto) => { setCorreo(texto); setErrorCorreo(validarCorreo(texto)); }}
-            placeholder="usuario@email.com"
-            placeholderTextColor={colors.textMuted}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            maxLength={254}
-          />
-          {errorCorreo ? <Text style={common.errorText}>{errorCorreo}</Text> : null}
-
-          <Text style={common.label}>Contraseña</Text>
-          <View style={[common.inputWrap, errorPassword ? common.inputError : null]}>
-            <TextInput
-              style={common.inputFlex}
-              value={password}
-              onChangeText={(texto) => { setPassword(texto); setErrorPassword(validarPassword(texto)); }}
-              placeholder="••••••••"
-              placeholderTextColor={colors.textMuted}
-              secureTextEntry={!verPassword}
-              maxLength={32}
-            />
-            <TouchableOpacity onPress={() => setVerPassword(!verPassword)}>
-              <Text style={common.eyeIcon}>{verPassword ? '🙈' : '👁'}</Text>
-            </TouchableOpacity>
-          </View>
-          {errorPassword ? <Text style={common.errorText}>{errorPassword}</Text> : null}
-
-          {password.length > 0 && (
-            <View style={styles.checklist}>
-              {requisitos.map((req, i) => (
-                <View key={i} style={styles.checkItem}>
-                  <Text style={req.cumple ? styles.checkOk : styles.checkPending}>
-                    {req.cumple ? '✓' : '○'}
-                  </Text>
-                  <Text style={req.cumple ? styles.checkLabelOk : styles.checkLabelPending}>
-                    {req.label}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          )}
-
-          <Text style={common.label}>Confirmar contraseña</Text>
-          <View style={[common.inputWrap, errorConfirmar ? common.inputError : null]}>
-            <TextInput
-              style={common.inputFlex}
-              value={confirmar}
-              onChangeText={(texto) => { setConfirmar(texto); setErrorConfirmar(validarConfirmar(texto)); }}
-              placeholder="••••••••"
-              placeholderTextColor={colors.textMuted}
-              secureTextEntry={!verConfirmar}
-              maxLength={32}
-            />
-            <TouchableOpacity onPress={() => setVerConfirmar(!verConfirmar)}>
-              <Text style={common.eyeIcon}>{verConfirmar ? '🙈' : '👁'}</Text>
-            </TouchableOpacity>
-          </View>
-          {errorConfirmar ? <Text style={common.errorText}>{errorConfirmar}</Text> : null}
-
-          <TouchableOpacity
-            style={[common.btnPrimary, styles.btnMargin, cargando && common.btnDisabled]}
-            onPress={handleRegistro}
-            disabled={cargando}
-          >
-            <Text style={common.btnPrimaryText}>
-              {cargando ? 'Creando cuenta...' : 'Crear cuenta →'}
-            </Text>
-          </TouchableOpacity>
-
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
+      <View style={styles.container}>
+        <View style={styles.navbar}>
           <TouchableOpacity onPress={() => router.back()}>
-            <Text style={common.link}>
-              ¿Ya tienes cuenta? <Text style={common.linkAccent}>Iniciar sesión</Text>
-            </Text>
+            <Text style={styles.navBack}>←</Text>
           </TouchableOpacity>
-
+          <Text style={styles.navTitle}>REGISTRO</Text>
+          <View style={{ width: 24 }} />
         </View>
-      </ScrollView>
-    </View>
+
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}
+        >
+          <View style={styles.screen}>
+
+            <TouchableOpacity style={common.btnGoogle}>
+              <Text style={styles.btnGoogleIcon}>🔵</Text>
+              <Text style={styles.btnGoogleText}>Registrarse con Google</Text>
+            </TouchableOpacity>
+
+            <View style={common.divider}>
+              <View style={common.dividerLine} />
+              <Text style={common.dividerText}>o</Text>
+              <View style={common.dividerLine} />
+            </View>
+
+            <Text style={common.label}>Nombre completo</Text>
+            <TextInput
+              style={[common.input, errorNombre ? common.inputError : null]}
+              value={nombre}
+              onChangeText={(texto) => { setNombre(texto); setErrorNombre(validarNombre(texto)); }}
+              placeholder="Viviana Nieto"
+              placeholderTextColor={colors.textMuted}
+              maxLength={50}
+            />
+            {errorNombre ? <Text style={common.errorText}>{errorNombre}</Text> : null}
+
+            <Text style={common.label}>Correo</Text>
+            <TextInput
+              style={[common.input, errorCorreo ? common.inputError : null]}
+              value={correo}
+              onChangeText={(texto) => { setCorreo(texto); setErrorCorreo(validarCorreo(texto)); }}
+              placeholder="usuario@email.com"
+              placeholderTextColor={colors.textMuted}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              maxLength={254}
+            />
+            {errorCorreo ? <Text style={common.errorText}>{errorCorreo}</Text> : null}
+
+            <Text style={common.label}>Contraseña</Text>
+            <View style={[common.inputWrap, errorPassword ? common.inputError : null]}>
+              <TextInput
+                style={common.inputFlex}
+                value={password}
+                onChangeText={(texto) => { setPassword(texto); setErrorPassword(validarPassword(texto)); }}
+                placeholder="••••••••"
+                placeholderTextColor={colors.textMuted}
+                secureTextEntry={!verPassword}
+                maxLength={32}
+              />
+              <TouchableOpacity onPress={() => setVerPassword(!verPassword)}>
+                <Text style={common.eyeIcon}>{verPassword ? '🙈' : '👁'}</Text>
+              </TouchableOpacity>
+            </View>
+            {errorPassword ? <Text style={common.errorText}>{errorPassword}</Text> : null}
+
+            {password.length > 0 && (
+              <View style={styles.checklist}>
+                {requisitos.map((req, i) => (
+                  <View key={i} style={styles.checkItem}>
+                    <Text style={req.cumple ? styles.checkOk : styles.checkPending}>
+                      {req.cumple ? '✓' : '○'}
+                    </Text>
+                    <Text style={req.cumple ? styles.checkLabelOk : styles.checkLabelPending}>
+                      {req.label}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            <Text style={common.label}>Confirmar contraseña</Text>
+            <View style={[common.inputWrap, errorConfirmar ? common.inputError : null]}>
+              <TextInput
+                style={common.inputFlex}
+                value={confirmar}
+                onChangeText={(texto) => { setConfirmar(texto); setErrorConfirmar(validarConfirmar(texto)); }}
+                placeholder="••••••••"
+                placeholderTextColor={colors.textMuted}
+                secureTextEntry={!verConfirmar}
+                maxLength={32}
+              />
+              <TouchableOpacity onPress={() => setVerConfirmar(!verConfirmar)}>
+                <Text style={common.eyeIcon}>{verConfirmar ? '🙈' : '👁'}</Text>
+              </TouchableOpacity>
+            </View>
+            {errorConfirmar ? <Text style={common.errorText}>{errorConfirmar}</Text> : null}
+
+            <TouchableOpacity
+              style={[common.btnPrimary, styles.btnMargin, cargando && common.btnDisabled]}
+              onPress={handleRegistro}
+              disabled={cargando}
+            >
+              <Text style={common.btnPrimaryText}>
+                {cargando ? 'Creando cuenta...' : 'Crear cuenta →'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={() => router.back()}>
+              <Text style={common.link}>
+                ¿Ya tienes cuenta? <Text style={common.linkAccent}>Iniciar sesión</Text>
+              </Text>
+            </TouchableOpacity>
+
+          </View>
+        </ScrollView>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 

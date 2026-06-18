@@ -29,16 +29,26 @@ export const procesarRecarga = async (
     .update({ estado: 'APROBADA' })
     .eq('id', recarga.id);
 
-  const { data: tarjetaData } = await supabase
+  // Obtener el número de tarjeta desde la relación usuario-tarjeta
+  const { data: tarjetaRelacion } = await supabase
     .from('tarjetas')
-    .select('saldo')
+    .select('numero_tarjeta')
     .eq('id', tarjetaId)
     .maybeSingle();
 
+  if (!tarjetaRelacion) throw new Error('No se encontró la tarjeta');
+
+  // Actualizar el saldo REAL en tarjetas_validas (saldo compartido)
+  const { data: tarjetaValida } = await supabase
+    .from('tarjetas_validas')
+    .select('saldo')
+    .eq('numero', tarjetaRelacion.numero_tarjeta)
+    .maybeSingle();
+
   await supabase
-    .from('tarjetas')
-    .update({ saldo: (tarjetaData?.saldo ?? 0) + monto })
-    .eq('id', tarjetaId);
+    .from('tarjetas_validas')
+    .update({ saldo: (tarjetaValida?.saldo ?? 0) + monto })
+    .eq('numero', tarjetaRelacion.numero_tarjeta);
 
   const { data: final, error: errorFinal } = await supabase
     .from('recargas')
