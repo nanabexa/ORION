@@ -1,8 +1,9 @@
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
+import * as Linking from 'expo-linking';
 
-const RUTAS_PUBLICAS = ['index', 'registro', 'recuperar', 'reset-password'];
+const RUTAS_PUBLICAS = ['index', 'registro', 'recuperar', 'reset'];
 
 export default function Layout() {
   const router = useRouter();
@@ -36,6 +37,23 @@ export default function Layout() {
       authListener.subscription.unsubscribe();
     };
   }, [segments]);
+  
+  useEffect(() => {
+  const manejarUrl = (url: string | null) => {
+    if (!url) return;
+    if (url.includes('auth/reset')) {
+      router.replace('/auth/reset' as any);
+    }
+  };
+
+  Linking.getInitialURL().then(manejarUrl);
+
+  const subscription = Linking.addEventListener('url', ({ url }) => {
+    manejarUrl(url);
+  });
+
+  return () => subscription.remove();
+}, []);
 
   return (
     <Stack screenOptions={{ headerShown: false }} />

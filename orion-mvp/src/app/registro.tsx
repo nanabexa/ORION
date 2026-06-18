@@ -103,8 +103,8 @@ export default function RegistroScreen() {
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'android' ? 80 : 0}
     >
       <View style={styles.container}>
         <View style={styles.navbar}>
@@ -118,15 +118,9 @@ export default function RegistroScreen() {
         <ScrollView
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 150 }}
         >
           <View style={styles.screen}>
-
-            <TouchableOpacity style={common.btnGoogle}>
-              <Text style={styles.btnGoogleIcon}>🔵</Text>
-              <Text style={styles.btnGoogleText}>Registrarse con Google</Text>
-            </TouchableOpacity>
-
             <View style={common.divider}>
               <View style={common.dividerLine} />
               <Text style={common.dividerText}>o</Text>
@@ -238,8 +232,6 @@ const styles = StyleSheet.create({
   navBack: { fontSize: 22, color: colors.textMuted },
   navTitle: { fontWeight: '900', fontSize: 13, color: colors.text, letterSpacing: 3 },
   screen: { padding: 24 },
-  btnGoogleIcon: { fontSize: 18 },
-  btnGoogleText: { fontSize: 14, color: colors.text, fontWeight: '500' },
   btnMargin: { marginTop: 24, marginBottom: 14 },
   checklist: {
     backgroundColor: colors.card, borderRadius: 8, padding: 12,

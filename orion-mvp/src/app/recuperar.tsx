@@ -10,26 +10,36 @@ export default function RecuperarScreen() {
 
     const [correo, setCorreo] = useState('');
     const [cargando, setCargando] = useState(false);
+    const [cooldown, setCooldown] = useState(0);
+
+    const iniciarCooldown = () => {
+        setCooldown(30);
+        const interval = setInterval(() => {
+            setCooldown((prev) => {
+                if (prev <= 1) {
+                    clearInterval(interval);
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+    };
 
     const recuperarPassword = async () => {
-        console.log('1 - boton presionado, correo:', correo);
-
         if (!correo) {
             Alert.alert('Error', 'Ingrese su correo');
             return;
         }
 
         setCargando(true);
-        console.log('2 - llamando a supabase');
 
         const { error } = await supabase.auth.resetPasswordForEmail(
             correo,
             {
-                redirectTo: 'orionmvp://reset-password'
+                redirectTo: 'orionmvp://auth/reset'
             }
         );
 
-        console.log('3 - respuesta error:', error);
         setCargando(false);
 
         if (error) {
@@ -40,8 +50,11 @@ export default function RecuperarScreen() {
                 'Revisa tu bandeja de entrada para restablecer tu contraseña.',
                 [{ text: 'OK', onPress: () => router.back() }]
             );
+            iniciarCooldown();
         }
     };
+
+    const deshabilitado = cargando || cooldown > 0;
 
     return (
         <View style={styles.container}>
@@ -60,12 +73,12 @@ export default function RecuperarScreen() {
             />
 
             <TouchableOpacity
-                style={[common.btnPrimary, { marginTop: 20 }]}
+                style={[common.btnPrimary, { marginTop: 20 }, deshabilitado && common.btnDisabled]}
                 onPress={recuperarPassword}
-                disabled={cargando}
+                disabled={deshabilitado}
             >
                 <Text style={common.btnPrimaryText}>
-                    {cargando ? 'Enviando...' : 'Enviar enlace'}
+                    {cargando ? 'Enviando...' : cooldown > 0 ? `Espera ${cooldown}s` : 'Enviar enlace'}
                 </Text>
             </TouchableOpacity>
 

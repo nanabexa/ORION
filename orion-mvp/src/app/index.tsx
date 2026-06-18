@@ -83,11 +83,6 @@ export default function LoginScreen() {
             <Text style={styles.logoSub}>recarga digital</Text>
           </View>
 
-          <TouchableOpacity style={common.btnGoogle}>
-            <Text style={styles.btnGoogleIcon}>🔵</Text>
-            <Text style={styles.btnGoogleText}>Continuar con Google</Text>
-          </TouchableOpacity>
-
           <View style={common.divider}>
             <View style={common.dividerLine} />
             <Text style={common.dividerText}>o</Text>
@@ -178,8 +173,6 @@ const styles = StyleSheet.create({
     fontSize: 10, color: 'rgba(255,255,255,0.35)',
     letterSpacing: 3, marginTop: 4, textTransform: 'uppercase',
   },
-  btnGoogleIcon: { fontSize: 18 },
-  btnGoogleText: { fontSize: 14, color: colors.text, fontWeight: '500' },
   btnMargin: { marginTop: 20, marginBottom: 14 },
   olvidoLink: {
     color: colors.accent,

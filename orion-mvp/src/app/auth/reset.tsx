@@ -1,9 +1,9 @@
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
-import { supabase } from '../../lib/supabase';
-import { colors } from '../theme/colors';
-import { common } from '../theme/components';
+import { supabase } from '../../../lib/supabase';
+import { colors } from '../../theme/colors';
+import { common } from '../../theme/components';
 
 export default function ResetPasswordScreen() {
   const router = useRouter();

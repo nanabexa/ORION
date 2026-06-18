@@ -81,8 +81,9 @@ export default function VincularScreen() {
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding':undefined}
     >
+
       <View style={styles.container}>
         <View style={styles.navbar}>
           <View style={{ width: 24 }} />
@@ -172,7 +173,7 @@ const styles = StyleSheet.create({
     padding: 18, paddingTop: 48, borderBottomWidth: 0.5, borderBottomColor: colors.borderLight,
   },
   navTitle: { fontWeight: '900', fontSize: 13, color: colors.text, letterSpacing: 3 },
-  screen: { padding: 20 },
+  screen: { padding: 20, marginTop:-20},
   cardPreview: {
     borderRadius: 14, padding: 20, marginBottom: 24,
     position: 'relative', overflow: 'hidden', minHeight: 140,
