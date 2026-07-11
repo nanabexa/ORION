@@ -70,6 +70,21 @@ export default function VincularScreen() {
         return;
       }
 
+      // Verificar que el usuario no tenga ya esta tarjeta vinculada
+      const { data: yaVinculada } = await supabase
+        .from('tarjetas')
+        .select('id')
+        .eq('usuario_id', user.id)
+        .eq('numero_tarjeta', numeroLimpio)
+        .eq('activa', true)
+        .maybeSingle();
+
+      if (yaVinculada) {
+        setMensajeError('Esta tarjeta ya está vinculada a tu cuenta.');
+        setCargando(false);
+        return;
+      }
+
       await vincularTarjeta(user.id, numeroLimpio);
       setMensajeExito('¡Tarjeta vinculada correctamente!');
       setTimeout(() => router.push('/tarjetas' as any), 1500);
