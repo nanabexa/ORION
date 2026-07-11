@@ -1,4 +1,4 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
@@ -19,6 +19,8 @@ export default function RegistroScreen() {
   const [errorCorreo, setErrorCorreo] = useState('');
   const [errorPassword, setErrorPassword] = useState('');
   const [errorConfirmar, setErrorConfirmar] = useState('');
+  const [mensajeError, setMensajeError] = useState('');
+  const [mensajeExito, setMensajeExito] = useState('');
 
   const validarNombre = (texto: string) => {
     if (!texto) return 'El nombre es requerido';
@@ -60,6 +62,9 @@ export default function RegistroScreen() {
   ];
 
   const handleRegistro = async () => {
+    setMensajeError('');
+    setMensajeExito('');
+
     const errNombre = validarNombre(nombre);
     const errCorreo = validarCorreo(correo);
     const errPass = validarPassword(password);
@@ -83,18 +88,20 @@ export default function RegistroScreen() {
       });
 
       if (error) {
-        Alert.alert('Error', error.message);
+        if (error.message.includes('already registered') || error.message.includes('already been registered')) {
+          setMensajeError('Este correo ya tiene una cuenta');
+        } else {
+          setMensajeError(error.message);
+        }
         return;
       }
 
-      Alert.alert(
-        '¡Cuenta creada!',
-        'Te enviamos un correo de confirmación. Revisa tu bandeja de entrada antes de iniciar sesión.',
-        [{ text: 'OK', onPress: () => router.push('/' as any) }]
-      );
+      setMensajeExito('¡Cuenta creada! Te enviamos un correo de confirmación. Revisa tu bandeja de entrada.');
+      // Redirige a login tras 2 segundos para que el usuario alcance a leer el mensaje
+      setTimeout(() => router.push('/' as any), 2000);
 
     } catch (e) {
-      Alert.alert('Error', 'No se pudo crear la cuenta');
+      setMensajeError('No se pudo crear la cuenta');
     } finally {
       setCargando(false);
     }
@@ -131,7 +138,7 @@ export default function RegistroScreen() {
             <TextInput
               style={[common.input, errorNombre ? common.inputError : null]}
               value={nombre}
-              onChangeText={(texto) => { setNombre(texto); setErrorNombre(validarNombre(texto)); }}
+              onChangeText={(texto) => { setNombre(texto); setErrorNombre(validarNombre(texto)); setMensajeError(''); }}
               placeholder="Viviana Nieto"
               placeholderTextColor={colors.textMuted}
               maxLength={50}
@@ -142,7 +149,7 @@ export default function RegistroScreen() {
             <TextInput
               style={[common.input, errorCorreo ? common.inputError : null]}
               value={correo}
-              onChangeText={(texto) => { setCorreo(texto); setErrorCorreo(validarCorreo(texto)); }}
+              onChangeText={(texto) => { setCorreo(texto); setErrorCorreo(validarCorreo(texto)); setMensajeError(''); }}
               placeholder="usuario@email.com"
               placeholderTextColor={colors.textMuted}
               keyboardType="email-address"
@@ -156,7 +163,7 @@ export default function RegistroScreen() {
               <TextInput
                 style={common.inputFlex}
                 value={password}
-                onChangeText={(texto) => { setPassword(texto); setErrorPassword(validarPassword(texto)); }}
+                onChangeText={(texto) => { setPassword(texto); setErrorPassword(validarPassword(texto)); setMensajeError(''); }}
                 placeholder="••••••••"
                 placeholderTextColor={colors.textMuted}
                 secureTextEntry={!verPassword}
@@ -188,7 +195,7 @@ export default function RegistroScreen() {
               <TextInput
                 style={common.inputFlex}
                 value={confirmar}
-                onChangeText={(texto) => { setConfirmar(texto); setErrorConfirmar(validarConfirmar(texto)); }}
+                onChangeText={(texto) => { setConfirmar(texto); setErrorConfirmar(validarConfirmar(texto)); setMensajeError(''); }}
                 placeholder="••••••••"
                 placeholderTextColor={colors.textMuted}
                 secureTextEntry={!verConfirmar}
@@ -199,6 +206,18 @@ export default function RegistroScreen() {
               </TouchableOpacity>
             </View>
             {errorConfirmar ? <Text style={common.errorText}>{errorConfirmar}</Text> : null}
+
+            {mensajeError ? (
+              <Text testID="registro-error" style={[common.errorText, { textAlign: 'center', marginTop: 10 }]}>
+                {mensajeError}
+              </Text>
+            ) : null}
+
+            {mensajeExito ? (
+              <Text testID="registro-exito" style={[styles.exitoText]}>
+                {mensajeExito}
+              </Text>
+            ) : null}
 
             <TouchableOpacity
               style={[common.btnPrimary, styles.btnMargin, cargando && common.btnDisabled]}
@@ -242,4 +261,8 @@ const styles = StyleSheet.create({
   checkPending: { fontSize: 12, color: colors.textMuted },
   checkLabelOk: { fontSize: 11, color: colors.success },
   checkLabelPending: { fontSize: 11, color: colors.textMuted },
+  exitoText: {
+    fontSize: 12, color: colors.success, textAlign: 'center',
+    marginTop: 10, lineHeight: 18,
+  },
 });

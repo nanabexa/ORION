@@ -1,0 +1,18 @@
+node_modules
+
+# Cypress
+cypress/videos/
+cypress/screenshots/
+cypress/downloads/
+
+# Env
+.env
+.env.local
+
+# Expo
+.expo/
+dist/
+web-build/
+
+# OS
+.DS_Store

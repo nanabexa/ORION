@@ -1,4 +1,4 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
@@ -13,6 +13,8 @@ export default function VincularScreen() {
   const [numero, setNumero] = useState('');
   const [tipo, setTipo] = useState<TipoTarjeta>(null);
   const [cargando, setCargando] = useState(false);
+  const [mensajeError, setMensajeError] = useState('');
+  const [mensajeExito, setMensajeExito] = useState('');
 
   const formatearNumero = (texto: string) => {
     const max = tipo === 'metro' ? 10 : 8;
@@ -21,7 +23,7 @@ export default function VincularScreen() {
     return grupos ? grupos.join(' ') : limpio;
   };
 
-  const handleCambio = (texto: string) => setNumero(formatearNumero(texto));
+  const handleCambio = (texto: string) => { setNumero(formatearNumero(texto)); setMensajeError(''); };
 
   const digitosRequeridos = tipo === 'metro' ? 10 : 8;
   const numeroCompleto = numero.replace(/\s/g, '').length === digitosRequeridos;
@@ -36,11 +38,13 @@ export default function VincularScreen() {
 
   const handleVincular = async () => {
     if (!listo) return;
+    setMensajeError('');
+    setMensajeExito('');
     setCargando(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        Alert.alert('Error', 'No hay sesión activa');
+        setMensajeError('No hay sesión activa');
         setCargando(false);
         return;
       }
@@ -55,24 +59,23 @@ export default function VincularScreen() {
         .single();
 
       if (!tarjetaValida) {
-        Alert.alert('Tarjeta no encontrada', 'El número ingresado no está registrado en el sistema.');
+        setMensajeError('El número ingresado no está registrado en el sistema.');
         setCargando(false);
         return;
       }
 
       if (tarjetaValida.tipo !== tipo) {
-        Alert.alert('Tipo incorrecto', `Este número corresponde a una tarjeta ${tarjetaValida.tipo === 'metro' ? 'Metro + MetroBus' : 'RapiPass'}.`);
+        setMensajeError(`Este número corresponde a una tarjeta ${tarjetaValida.tipo === 'metro' ? 'Metro + MetroBus' : 'RapiPass'}.`);
         setCargando(false);
         return;
       }
 
       await vincularTarjeta(user.id, numeroLimpio);
-      Alert.alert('¡Listo!', 'Tarjeta vinculada correctamente', [
-        { text: 'OK', onPress: () => router.push('/tarjetas' as any) }
-      ]);
+      setMensajeExito('¡Tarjeta vinculada correctamente!');
+      setTimeout(() => router.push('/tarjetas' as any), 1500);
 
     } catch (error: any) {
-      Alert.alert('Error', error?.message || JSON.stringify(error));
+      setMensajeError(error?.message || 'No se pudo vincular la tarjeta');
     } finally {
       setCargando(false);
     }
@@ -117,7 +120,7 @@ export default function VincularScreen() {
                 <TouchableOpacity
                   key={item.id}
                   style={[styles.tipoOpt, tipo === item.id && styles.tipoOptActive]}
-                  onPress={() => setTipo(item.id as TipoTarjeta)}
+                  onPress={() => { setTipo(item.id as TipoTarjeta); setMensajeError(''); }}
                 >
                   <View style={[styles.tipoRadio, tipo === item.id && styles.tipoRadioActive]}>
                     {tipo === item.id && <View style={styles.tipoRadioInner} />}
@@ -148,6 +151,18 @@ export default function VincularScreen() {
                 El número de 8 o 10 dígitos está en tu tarjeta de transporte.
               </Text>
             </View>
+
+            {mensajeError ? (
+              <Text testID="vincular-error" style={[common.errorText, { textAlign: 'center', marginBottom: 12 }]}>
+                {mensajeError}
+              </Text>
+            ) : null}
+
+            {mensajeExito ? (
+              <Text testID="vincular-exito" style={styles.exitoText}>
+                {mensajeExito}
+              </Text>
+            ) : null}
 
             <TouchableOpacity
               style={[common.btnPrimary, !listo && common.btnDisabled]}
@@ -222,4 +237,8 @@ const styles = StyleSheet.create({
     borderRadius: 8, padding: 12, marginBottom: 24,
   },
   hintText: { flex: 1, fontSize: 11, color: colors.textMuted, lineHeight: 16 },
+  exitoText: {
+    fontSize: 12, color: colors.success, textAlign: 'center',
+    marginBottom: 12, lineHeight: 18,
+  },
 });

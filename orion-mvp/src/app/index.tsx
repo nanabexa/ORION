@@ -1,4 +1,4 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
@@ -13,6 +13,7 @@ export default function LoginScreen() {
   const [cargando, setCargando] = useState(false);
   const [errorCorreo, setErrorCorreo] = useState('');
   const [errorPassword, setErrorPassword] = useState('');
+  const [errorGeneral, setErrorGeneral] = useState('');
 
   const validarCorreo = (texto: string) => {
     if (!texto) return 'El correo es requerido';
@@ -27,6 +28,7 @@ export default function LoginScreen() {
   };
 
   const handleLogin = async () => {
+    setErrorGeneral('');
     const errCorreo = validarCorreo(correo);
     const errPass = validarPassword(password);
     setErrorCorreo(errCorreo);
@@ -41,13 +43,13 @@ export default function LoginScreen() {
     setCargando(false);
 
     if (error) {
+      let mensaje = error.message;
       if (error.message.includes('Invalid login credentials')) {
-        Alert.alert('Usuario no encontrado', 'Este correo no está registrado o la contraseña es incorrecta.');
+        mensaje = 'Correo o contraseña incorrectos';
       } else if (error.message.includes('Email not confirmed')) {
-        Alert.alert('Correo no confirmado', 'Debes confirmar tu correo antes de iniciar sesión. Revisa tu bandeja de entrada.');
-      } else {
-        Alert.alert('Error', error.message);
+        mensaje = 'Debes confirmar tu correo antes de iniciar sesión';
       }
+      setErrorGeneral(mensaje);
     } else {
       router.push('/saldo' as any);
     }
@@ -93,7 +95,7 @@ export default function LoginScreen() {
           <TextInput
             style={[common.input, errorCorreo ? common.inputError : null]}
             value={correo}
-            onChangeText={(texto) => { setCorreo(texto); setErrorCorreo(''); }}
+            onChangeText={(texto) => { setCorreo(texto); setErrorCorreo(''); setErrorGeneral(''); }}
             placeholder="usuario@email.com"
             placeholderTextColor={colors.textMuted}
             keyboardType="email-address"
@@ -106,7 +108,7 @@ export default function LoginScreen() {
             <TextInput
               style={common.inputFlex}
               value={password}
-              onChangeText={(texto) => { setPassword(texto); setErrorPassword(''); }}
+              onChangeText={(texto) => { setPassword(texto); setErrorPassword(''); setErrorGeneral(''); }}
               placeholder="••••••••"
               placeholderTextColor={colors.textMuted}
               secureTextEntry={!verPassword}
@@ -120,6 +122,12 @@ export default function LoginScreen() {
           <TouchableOpacity onPress={() => router.push('/recuperar' as any)}>
             <Text style={styles.olvidoLink}>¿Olvidaste tu contraseña?</Text>
           </TouchableOpacity>
+
+          {errorGeneral ? (
+            <Text testID="error-login" style={[common.errorText, { textAlign: 'center', marginTop: 8 }]}>
+              {errorGeneral}
+            </Text>
+          ) : null}
 
           <TouchableOpacity
             style={[common.btnPrimary, styles.btnMargin, cargando && common.btnDisabled]}

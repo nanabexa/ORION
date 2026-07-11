@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useState, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
@@ -9,6 +9,7 @@ import { common } from '../theme/components';
 export default function PerfilScreen() {
   const router = useRouter();
   const [usuario, setUsuario] = useState({ nombre: '', email: '' });
+  const [confirmarLogout, setConfirmarLogout] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -29,22 +30,9 @@ export default function PerfilScreen() {
     if (data) setUsuario(data);
   };
 
-  const cerrarSesion = async () => {
-    Alert.alert(
-      'Cerrar sesión',
-      '¿Estás seguro que quieres cerrar sesión?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Cerrar sesión',
-          style: 'destructive',
-          onPress: async () => {
-            await supabase.auth.signOut();
-            router.replace('/');
-          }
-        }
-      ]
-    );
+  const ejecutarCerrarSesion = async () => {
+    await supabase.auth.signOut();
+    router.replace('/');
   };
 
   return (
@@ -112,9 +100,27 @@ export default function PerfilScreen() {
             </TouchableOpacity>
           ))}
 
-          <TouchableOpacity style={styles.btnCerrar} onPress={cerrarSesion}>
-            <Text style={styles.btnCerrarText}>Cerrar sesión</Text>
-          </TouchableOpacity>
+          {!confirmarLogout ? (
+            <TouchableOpacity style={styles.btnCerrar} onPress={() => setConfirmarLogout(true)}>
+              <Text style={styles.btnCerrarText}>Cerrar sesión</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.confirmBox}>
+              <Text style={styles.confirmText}>¿Estás seguro que quieres cerrar sesión?</Text>
+              <View style={styles.confirmBtns}>
+                <TouchableOpacity style={styles.btnCancelar} onPress={() => setConfirmarLogout(false)}>
+                  <Text style={styles.btnCancelarText}>Cancelar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  testID="confirmar-logout"
+                  style={styles.btnConfirmar}
+                  onPress={ejecutarCerrarSesion}
+                >
+                  <Text style={styles.btnConfirmarText}>Cerrar sesión</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
 
         </View>
       </ScrollView>
@@ -160,4 +166,20 @@ const styles = StyleSheet.create({
     padding: 14, alignItems: 'center', marginTop: 24,
   },
   btnCerrarText: { color: colors.error, fontSize: 13, fontWeight: '600' },
+  confirmBox: {
+    borderWidth: 0.5, borderColor: colors.error, borderRadius: 10,
+    padding: 16, marginTop: 24,
+  },
+  confirmText: { color: colors.text, fontSize: 13, textAlign: 'center', marginBottom: 12 },
+  confirmBtns: { flexDirection: 'row', gap: 10 },
+  btnCancelar: {
+    flex: 1, borderWidth: 0.5, borderColor: colors.border, borderRadius: 8,
+    padding: 12, alignItems: 'center',
+  },
+  btnCancelarText: { color: colors.textMuted, fontSize: 13 },
+  btnConfirmar: {
+    flex: 1, backgroundColor: colors.error, borderRadius: 8,
+    padding: 12, alignItems: 'center',
+  },
+  btnConfirmarText: { color: colors.text, fontSize: 13, fontWeight: '600' },
 });

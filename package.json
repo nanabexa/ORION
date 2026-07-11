@@ -1,0 +1,8 @@
+{
+  "devDependencies": {
+    "cypress": "^15.18.1"
+  },
+  "dependencies": {
+    "expo": "^57.0.4"
+  }
+}
