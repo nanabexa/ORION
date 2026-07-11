@@ -17,9 +17,13 @@ export default function HistorialScreen() {
     }, [])
   );
 
+
   const cargarHistorial = async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      router.replace('/');
+      return;
+    }
 
     const { data, error } = await supabase
       .from('recargas').select('*')

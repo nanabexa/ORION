@@ -14,4 +14,9 @@
 // ***********************************************************
 
 // Import commands.js using ES2015 syntax:
-import './commands'
+import './commands';
+
+afterEach(function () {
+  // Captura al final de cada test, usando el título como nombre
+  cy.screenshot(this.currentTest.title.replace(/[^a-zA-Z0-9-_ ]/g, ''), { capture: 'viewport' });
+});

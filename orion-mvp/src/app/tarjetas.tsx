@@ -19,7 +19,10 @@ export default function TarjetasScreen() {
 
   const cargarTarjetas = async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      router.replace('/');
+      return;
+    }
     const data = await getTarjetas(user.id);
     if (!data) return;
 

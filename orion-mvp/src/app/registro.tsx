@@ -82,19 +82,22 @@ export default function RegistroScreen() {
       const { data, error } = await supabase.auth.signUp({
         email: correo,
         password: password,
-        options: {
-          data: { nombre: nombre }
-        }
+        options: { data: { nombre: nombre } }
       });
 
       if (error) {
-        if (error.message.includes('already registered') || error.message.includes('already been registered')) {
-          setMensajeError('Este correo ya tiene una cuenta');
-        } else {
-          setMensajeError(error.message);
-        }
+        setMensajeError(error.message);
         return;
       }
+
+      // Supabase no da error si el correo existe, pero devuelve identities vacío
+      if (data.user && data.user.identities && data.user.identities.length === 0) {
+        setMensajeError('Este correo ya tiene una cuenta');
+        return;
+      }
+
+      setMensajeExito('¡Cuenta creada! Te enviamos un correo de confirmación. Revisa tu bandeja de entrada.');
+      setTimeout(() => router.push('/' as any), 2000);
 
       setMensajeExito('¡Cuenta creada! Te enviamos un correo de confirmación. Revisa tu bandeja de entrada.');
       // Redirige a login tras 2 segundos para que el usuario alcance a leer el mensaje

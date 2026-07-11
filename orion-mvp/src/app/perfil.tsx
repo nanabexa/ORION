@@ -19,7 +19,10 @@ export default function PerfilScreen() {
 
   const cargarPerfil = async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      router.replace('/');
+      return;
+    }
 
     const { data } = await supabase
       .from('usuarios')

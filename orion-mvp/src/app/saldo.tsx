@@ -20,7 +20,10 @@ export default function SaldoScreen() {
 
   const cargarDatos = async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      router.replace('/');
+      return;
+    }
 
     const { data: listaTarjetas } = await supabase
       .from('tarjetas').select('*')

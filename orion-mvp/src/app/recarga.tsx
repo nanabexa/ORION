@@ -60,13 +60,27 @@ export default function RecargaScreen() {
 
   const cargarTarjetas = async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      router.replace('/');
+      return;
+    }
     const { data } = await supabase
       .from('tarjetas').select('*')
       .eq('usuario_id', user.id).eq('activa', true);
+
     if (data && data.length > 0) {
-      setTarjetas(data);
-      setTarjetaSeleccionada(data[0]);
+      const tarjetasConSaldo = await Promise.all(
+        data.map(async (t) => {
+          const { data: tarjetaValida } = await supabase
+            .from('tarjetas_validas')
+            .select('saldo')
+            .eq('numero', t.numero_tarjeta)
+            .maybeSingle();
+          return { ...t, saldo: tarjetaValida?.saldo ?? 0 };
+        })
+      );
+      setTarjetas(tarjetasConSaldo);
+      setTarjetaSeleccionada(tarjetasConSaldo[0]);
     }
   };
 
