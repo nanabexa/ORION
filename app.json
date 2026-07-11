@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "e5231c86-b117-4411-9a85-e1223540a684"
+      }
+    },
+    "android": {
+      "package": "com.nanabexa10.orion"
+    }
+  }
+}

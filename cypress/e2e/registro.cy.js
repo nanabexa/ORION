@@ -62,8 +62,9 @@ describe('ORION - Registro', () => {
 
   it('TC-15: el enlace navega de vuelta a Login', () => {
     cy.contains('Iniciar sesión').scrollIntoView().click({ force: true });
-    // Verifica que volvió al login: el campo de correo del login está visible
-    cy.get('input[placeholder="usuario@email.com"]').filter(':visible').should('exist');
-    cy.contains('¿Olvidaste tu contraseña?').should('be.visible');
+    // Verifica la navegación por URL, no por texto (evita los nodos ocultos de RN Web)
+    cy.url({ timeout: 10000 }).should('not.include', '/registro');
+    // Confirma que el campo de contraseña del login es visible
+    cy.get('input[placeholder="••••••••"]').filter(':visible').should('have.length', 1);
   });
 });
